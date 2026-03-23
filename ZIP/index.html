@@ -1,0 +1,2169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>GitHub Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root {
+  --bg: #f2f2f7;
+  --bg2: #ffffff;
+  --bg3: #e5e5ea;
+  --bg4: #f9f9fb;
+  --surface: rgba(255,255,255,0.92);
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.13);
+  --text: #1c1c1e;
+  --text2: #3a3a3c;
+  --text3: #636366;
+  --text4: #8e8e93;
+  --accent: #007aff;
+  --accent2: #5856d6;
+  --green: #34c759;
+  --red: #ff3b30;
+  --orange: #ff9500;
+  --pink: #ff2d55;
+  --shadow: 0 2px 12px rgba(0,0,0,0.07);
+  --shadow2: 0 8px 32px rgba(0,0,0,0.13);
+  --r: 14px;
+  --r2: 10px;
+  --r3: 8px;
+  --blur: blur(20px);
+  --nav-h: 56px;
+  --tab-h: 60px;
+  --sidebar-w: 280px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:15px;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:99px;}
+button,input,select,textarea{font-family:inherit;}
+a{color:var(--accent);text-decoration:none;}
+img{display:block;}
+
+/* LOGIN */
+#loginScreen{
+  display:flex;align-items:center;justify-content:center;
+  height:100%;min-height:100vh;
+  background:linear-gradient(145deg,#dde8ff 0%,#f2f2f7 50%,#dffce8 100%);
+  padding:20px;
+}
+.login-card{
+  background:var(--surface);
+  backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  border:1px solid var(--border);border-radius:24px;
+  padding:36px 28px;width:100%;max-width:400px;
+  box-shadow:var(--shadow2);text-align:center;
+  animation:slideUp .45s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes slideUp{from{opacity:0;transform:translateY(24px) scale(.96)}to{opacity:1;transform:none}}
+.login-logo{width:68px;height:68px;background:linear-gradient(135deg,#1c1c1e,#444);border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 6px 20px rgba(0,0,0,.22);}
+.login-logo i{font-size:34px;color:#fff;}
+.login-card h1{font-weight:700;font-size:24px;margin-bottom:4px;}
+.login-card p{color:var(--text4);font-size:14px;margin-bottom:28px;}
+.f-group{margin-bottom:14px;text-align:left;}
+.f-group label{display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;}
+.f-group input,.f-group select,.f-group textarea{width:100%;padding:12px 14px;background:var(--bg);border:1.5px solid var(--border2);border-radius:var(--r2);font-size:14px;color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s;}
+.f-group input:focus,.f-group select:focus,.f-group textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,122,255,.1);}
+.f-group textarea{resize:vertical;min-height:90px;font-family:'JetBrains Mono',monospace;font-size:12px;}
+.f-group input[type=file]{padding:8px;}
+.btn-primary{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:var(--r2);font-size:15px;font-weight:600;cursor:pointer;transition:all .2s;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-primary:active{opacity:.85;transform:scale(.98);}
+
+/* APP SHELL */
+#app{display:none;height:100%;position:relative;}
+
+/* SIDEBAR */
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:var(--sidebar-w);background:var(--surface);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:200;transition:transform .3s cubic-bezier(.4,0,.2,1);}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);z-index:199;opacity:0;transition:opacity .25s;pointer-events:none;}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border);}
+.user-row{display:flex;align-items:center;gap:10px;}
+.avatar{width:40px;height:40px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;overflow:hidden;}
+.avatar img{width:100%;height:100%;object-fit:cover;}
+.user-meta{flex:1;min-width:0;}
+.user-meta .uname{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-meta .uhandle{font-size:12px;color:var(--text4);}
+.btn-logout{width:32px;height:32px;border-radius:8px;background:transparent;border:none;cursor:pointer;color:var(--text4);display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s;}
+.btn-logout:hover{background:var(--bg3);color:var(--red);}
+.sidebar-search{padding:10px 14px;}
+.search-box{display:flex;align-items:center;gap:8px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:8px 12px;}
+.search-box i{color:var(--text4);font-size:13px;flex-shrink:0;}
+.search-box input{border:none;background:transparent;outline:none;font-size:13px;color:var(--text);width:100%;}
+.sidebar-nav{padding:2px 0;}
+.snav-title{font-size:11px;font-weight:600;color:var(--text4);text-transform:uppercase;letter-spacing:.7px;padding:8px 16px 3px;}
+.snav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;font-size:13.5px;font-weight:500;color:var(--text2);transition:background .12s;}
+.snav-item:hover{background:var(--bg3);}
+.snav-item.active{background:rgba(0,122,255,.1);color:var(--accent);}
+.snav-item i{width:18px;text-align:center;font-size:14px;}
+.sidebar-repos{flex:1;overflow-y:auto;padding-bottom:20px;}
+.srepo-item{display:flex;align-items:center;gap:9px;padding:9px 16px;cursor:pointer;font-size:13px;color:var(--text2);transition:background .12s;}
+.srepo-item:hover{background:var(--bg3);}
+.srepo-item.active{background:rgba(0,122,255,.1);color:var(--accent);}
+.srepo-item i{font-size:12px;color:var(--text4);flex-shrink:0;}
+.srepo-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;}
+.pvt-badge{font-size:9px;background:var(--bg3);color:var(--text4);padding:2px 5px;border-radius:4px;}
+
+/* TOPBAR */
+.topbar{position:fixed;left:0;top:0;right:0;height:var(--nav-h);background:var(--surface);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:10px;z-index:190;}
+.topbar-menu-btn{width:36px;height:36px;border-radius:10px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:16px;flex-shrink:0;transition:background .15s;}
+.topbar-menu-btn:hover{background:var(--bg3);}
+.topbar-brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;flex-shrink:0;}
+.topbar-breadcrumb{flex:1;display:flex;align-items:center;gap:4px;font-size:13px;min-width:0;overflow:hidden;}
+.tb-crumb{color:var(--accent);cursor:pointer;font-weight:500;white-space:nowrap;}
+.tb-crumb:hover{text-decoration:underline;}
+.tb-sep{color:var(--text4);margin:0 2px;}
+.topbar-actions{display:flex;gap:6px;flex-shrink:0;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:9px;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.btn:active{opacity:.8;transform:scale(.97);}
+.btn-accent{background:var(--accent);color:#fff;}
+.btn-accent:hover{background:#0066d6;}
+.btn-outline{background:transparent;color:var(--text2);border:1.5px solid var(--border2);}
+.btn-outline:hover{background:var(--bg3);}
+.btn-red{background:var(--red);color:#fff;}
+.btn-red:hover{background:#d93025;}
+.btn-green{background:var(--green);color:#fff;}
+.btn-green:hover{background:#28a745;}
+.btn-icon{width:34px;height:34px;border-radius:9px;border:1.5px solid var(--border2);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:13px;transition:all .15s;flex-shrink:0;}
+.btn-icon:hover{background:var(--bg3);}
+
+/* MAIN */
+.main{position:fixed;top:var(--nav-h);left:0;right:0;bottom:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+.main-inner{padding:14px;max-width:1400px;margin:0 auto;}
+
+/* DESKTOP */
+@media(min-width:768px){
+  .topbar-menu-btn{display:none;}
+  .topbar{left:var(--sidebar-w);}
+  .main{left:var(--sidebar-w);}
+}
+@media(max-width:767px){
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .sidebar-overlay{display:block;}
+  .sidebar-overlay.show{opacity:1;pointer-events:all;}
+}
+
+/* TV */
+@media(min-width:1400px){
+  :root{--sidebar-w:300px;}
+  .main-inner{padding:24px 32px;}
+}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);}
+.card-header{display:flex;align-items:center;gap:9px;padding:12px 15px;border-bottom:1px solid var(--border);background:var(--bg4);flex-wrap:wrap;}
+.card-header h3{font-size:14px;font-weight:600;flex:1;min-width:120px;}
+.card-header-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.card-body{padding:14px 15px;}
+
+.grid-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px;}
+@media(min-width:600px){.grid-stats{grid-template-columns:repeat(4,1fr);}}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.04);}
+.stat-card .s-label{font-size:11px;color:var(--text4);font-weight:500;margin-bottom:4px;}
+.stat-card .s-val{font-size:26px;font-weight:700;}
+
+.grid-2{display:grid;grid-template-columns:1fr;gap:12px;}
+@media(min-width:700px){.grid-2{grid-template-columns:1fr 1fr;}}
+
+/* TABS */
+.tabs{display:flex;gap:2px;background:var(--bg3);padding:3px;border-radius:11px;margin-bottom:12px;overflow-x:auto;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{flex:1;min-width:fit-content;text-align:center;padding:8px 10px;font-size:12.5px;font-weight:500;cursor:pointer;border-radius:8px;color:var(--text3);transition:all .15s;white-space:nowrap;}
+.tab.active{background:#fff;color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.1);font-weight:600;}
+
+/* REPO CARD - flat list style, no nested card */
+.repo-card{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:13px 15px;border-bottom:1px solid var(--border);
+  cursor:pointer;transition:background .12s;
+  background:transparent;
+}
+.repo-card:last-child{border-bottom:none;}
+.repo-card:hover{background:var(--bg4);}
+.repo-card:active{background:var(--bg3);}
+.rc-icon{width:34px;height:34px;border-radius:9px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;margin-top:1px;}
+.rc-info{flex:1;min-width:0;}
+.rc-name{font-weight:600;font-size:14px;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rc-desc{font-size:12.5px;color:var(--text4);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rc-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:7px;font-size:11.5px;color:var(--text4);align-items:center;}
+.rc-mi{display:flex;align-items:center;gap:3px;}
+.lang-dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+.tag{font-size:10.5px;padding:2px 7px;border-radius:5px;background:rgba(0,0,0,0.06);color:var(--text3);font-weight:500;}
+.tag.pub{background:rgba(52,199,89,.12);color:var(--green);}
+.tag.prv{background:rgba(255,149,0,.12);color:var(--orange);}
+.tag.fork{background:rgba(88,86,214,.12);color:var(--accent2);}
+/* Wrapper card for repo list - flat list inside one card */
+.repo-list-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);}
+.repo-list-card .repo-card:last-child{border-bottom:none;}
+/* When repo list is inside an outer .card (dashboard), no double border/shadow */
+.card .repo-list-card{border:none;border-radius:0;box-shadow:none;margin:0;}
+/* FILE TREE */
+.path-bar{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:9px 14px;background:var(--bg4);border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:12px;}
+.path-bar span{color:var(--accent);cursor:pointer;}
+.path-bar span:hover{text-decoration:underline;}
+.path-bar i{color:var(--text4);font-size:10px;}
+.file-item{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;min-height:48px;}
+.file-item:last-child{border-bottom:none;}
+.file-item:hover{background:var(--bg4);}
+.file-item:active{background:var(--bg3);}
+.file-item i{font-size:15px;width:18px;text-align:center;flex-shrink:0;}
+.fi-folder{color:#79c0ff;}
+.fi-yml{color:#f97316;}
+.fi-md{color:var(--accent);}
+.fi-sh{color:var(--green);}
+.fi-img{color:var(--pink);}
+.fi-file{color:var(--text4);}
+.fi-name{flex:1;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fi-size{font-size:11px;color:var(--text4);flex-shrink:0;}
+.fi-del{width:32px;height:32px;border-radius:8px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--red);font-size:13px;opacity:.5;transition:all .15s;flex-shrink:0;}
+.fi-del:hover{opacity:1;background:rgba(255,59,48,.1);}
+.files-actions{padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;background:var(--bg4);flex-wrap:wrap;}
+
+/* CODE EDITOR */
+.code-toolbar{display:flex;align-items:center;gap:8px;background:#1c1c1e;padding:10px 14px;border-radius:var(--r2) var(--r2) 0 0;}
+.code-dot{width:11px;height:11px;border-radius:50%;}
+.code-fname{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#8e8e93;flex:1;margin-left:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+textarea.code-editor{width:100%;background:#1c1c1e;color:#e5e5ea;border:none;outline:none;resize:none;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.7;padding:14px;-webkit-overflow-scrolling:touch;tab-size:4;-moz-tab-size:4;}
+@media(min-width:768px){textarea.code-editor{min-height:420px;}}
+.ed-btn{background:#333;border:none;color:#ccc;border-radius:5px;padding:4px 7px;font-size:11px;cursor:pointer;transition:background .1s;display:inline-flex;align-items:center;gap:3px;height:26px;}
+.ed-btn:hover{background:#555;color:#fff;}
+.ed-btn:active{background:#007aff;color:#fff;}
+
+/* WORKFLOW */
+.wf-item{display:flex;align-items:center;gap:12px;padding:12px 15px;border-bottom:1px solid var(--border);transition:background .1s;min-height:58px;}
+.wf-item:last-child{border-bottom:none;}
+.wf-item:hover{background:var(--bg4);}
+.wf-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.wf-dot.ok{background:var(--green);box-shadow:0 0 6px rgba(52,199,89,.5);}
+.wf-dot.fail{background:var(--red);box-shadow:0 0 6px rgba(255,59,48,.5);}
+.wf-dot.run{background:var(--orange);animation:pulse 1.1s infinite;}
+.wf-dot.idle{background:var(--text4);}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.3)}}
+.wf-info{flex:1;min-width:0;}
+.wf-name{font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.wf-meta{font-size:11.5px;color:var(--text4);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.wf-acts{display:flex;gap:6px;flex-shrink:0;}
+
+/* MODAL - bottom sheet on mobile */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:500;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;}
+.modal-overlay.show{opacity:1;pointer-events:all;}
+.modal{background:var(--bg2);width:100%;max-width:560px;border-radius:20px 20px 0 0;max-height:92vh;overflow-y:auto;border:1px solid var(--border);box-shadow:0 -4px 40px rgba(0,0,0,.15);transform:translateY(50px);transition:transform .28s cubic-bezier(.34,1.2,.64,1);}
+.modal-overlay.show .modal{transform:translateY(0);}
+@media(min-width:600px){
+  .modal-overlay{align-items:center;}
+  .modal{border-radius:20px;max-height:85vh;transform:scale(.95) translateY(10px);}
+  .modal-overlay.show .modal{transform:scale(1) translateY(0);}
+}
+.modal-drag{width:40px;height:4px;background:var(--bg3);border-radius:99px;margin:10px auto 0;}
+@media(min-width:600px){.modal-drag{display:none;}}
+.modal-header{display:flex;align-items:center;padding:16px 18px 12px;border-bottom:1px solid var(--border);}
+.modal-header h3{font-weight:700;font-size:16px;flex:1;}
+.modal-body{padding:16px 18px;}
+.modal-footer{padding:12px 18px 20px;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;}
+@media(max-width:400px){.modal-footer{flex-direction:column-reverse;}.modal-footer .btn{width:100%;justify-content:center;}}
+
+/* BOTTOM NAV */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-top:1px solid var(--border);z-index:180;padding-bottom:env(safe-area-inset-bottom,0);}
+.bottom-nav-inner{display:flex;height:56px;}
+.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;padding:4px;border-radius:10px;transition:all .15s;color:var(--text4);}
+.bnav-item.active{color:var(--accent);}
+.bnav-item:active{background:var(--bg3);}
+.bnav-item i{font-size:19px;}
+.bnav-item span{font-size:10px;font-weight:500;}
+@media(max-width:767px){
+  .bottom-nav{display:flex;flex-direction:column;}
+  .main{bottom:calc(56px + env(safe-area-inset-bottom,0px));}
+}
+
+/* TOAST */
+#toast-container{position:fixed;bottom:80px;right:12px;z-index:999;display:flex;flex-direction:column;gap:7px;pointer-events:none;max-width:calc(100vw - 24px);}
+@media(min-width:768px){#toast-container{bottom:24px;right:20px;max-width:320px;}}
+.toast{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:11px 14px;display:flex;align-items:center;gap:9px;box-shadow:var(--shadow2);animation:toastIn .3s cubic-bezier(.34,1.56,.64,1);pointer-events:all;font-size:13.5px;}
+@keyframes toastIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+.toast i{font-size:15px;flex-shrink:0;}
+.toast.ok i{color:var(--green);}
+.toast.err i{color:var(--red);}
+.toast.info i{color:var(--accent);}
+.toast.warn i{color:var(--orange);}
+
+/* UTILS */
+.page{display:none;}
+.fa-spin{animation:spin .6s linear infinite;}
+.page.active{display:block;animation:fadeIn .22s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.detail-panel{display:none;}
+.detail-panel.active{display:block;}
+.loading{display:flex;align-items:center;justify-content:center;padding:40px 20px;gap:10px;color:var(--text4);font-size:14px;}
+.spinner{width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:44px 16px;}
+.empty i{font-size:38px;color:var(--bg3);margin-bottom:12px;}
+.empty h3{font-size:17px;font-weight:600;margin-bottom:6px;color:var(--text2);}
+.empty p{font-size:13px;color:var(--text4);}
+.mono{font-family:'JetBrains Mono',monospace;}
+.branch-pill{display:inline-flex;align-items:center;gap:5px;background:rgba(0,122,255,.1);color:var(--accent);padding:3px 9px;border-radius:6px;font-size:11.5px;font-weight:600;font-family:'JetBrains Mono',monospace;}
+.text-muted{color:var(--text4);}
+.text-sm{font-size:13px;}
+.text-xs{font-size:11.5px;}
+.flex{display:flex;}.items-center{align-items:center;}.gap-8{gap:8px;}.flex-wrap{flex-wrap:wrap;}.flex-1{flex:1;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo"><i class="fab fa-github"></i></div>
+    <h1>GitHub Manager</h1>
+    <p>Masukkan Personal Access Token GitHub kamu</p>
+    <div class="f-group">
+      <label>GitHub Token (PAT)</label>
+      <input type="password" id="tokenInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="current-password">
+    </div>
+    <button class="btn-primary" onclick="doLogin()"><i class="fas fa-sign-in-alt"></i> Masuk</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="user-row">
+        <div class="avatar" id="sAvatar">G</div>
+        <div class="user-meta">
+          <div class="uname" id="sName">Loading...</div>
+          <div class="uhandle" id="sHandle">@...</div>
+        </div>
+        <button class="btn-logout" onclick="doLogout()" title="Logout"><i class="fas fa-sign-out-alt"></i></button>
+      </div>
+    </div>
+    <div class="sidebar-search">
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="text" id="sSearch" placeholder="Cari repo..." oninput="filterRepos()">
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="snav-title">Menu</div>
+      <div class="snav-item active" id="snav-dashboard" onclick="showPage('dashboard');closeSidebar()"><i class="fas fa-home"></i> Dashboard</div>
+      <div class="snav-item" id="snav-repos" onclick="showPage('repos');closeSidebar()"><i class="fas fa-book"></i> Repositories</div>
+      <div class="snav-item" id="snav-gists" onclick="showPage('gists');closeSidebar()"><i class="fab fa-github-alt"></i> Gists</div>
+      <div class="snav-title" style="margin-top:8px">Recent Repos</div>
+    </div>
+    <div class="sidebar-repos" id="sRepos">
+      <div class="loading"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <button class="topbar-menu-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+    <div class="topbar-brand"><i class="fab fa-github"></i></div>
+    <div class="topbar-breadcrumb" id="topBreadcrumb">
+      <span class="tb-crumb" onclick="showPage('dashboard')">Dashboard</span>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-accent" id="topBtn" onclick="openCreateRepoModal()" style="display:none;padding:7px 12px;font-size:12.5px">
+        <i class="fas fa-plus"></i> <span id="topBtnLabel">New</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main">
+    <div class="main-inner">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="grid-stats">
+          <div class="stat-card"><div class="s-label">Repositories</div><div class="s-val" id="st-repos">-</div></div>
+          <div class="stat-card"><div class="s-label">Followers</div><div class="s-val" id="st-fol">-</div></div>
+          <div class="stat-card"><div class="s-label">Following</div><div class="s-val" id="st-fing">-</div></div>
+          <div class="stat-card"><div class="s-label">Gists</div><div class="s-val" id="st-gists">-</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <i class="fas fa-clock"></i><h3>Recent Repositories</h3>
+            <div class="card-header-actions">
+              <button class="btn btn-outline" onclick="refreshDashboard()" id="dashRefreshBtn" style="padding:6px 10px;font-size:12px" title="Refresh"><i class="fas fa-rotate-right"></i></button>
+              <button class="btn btn-accent" onclick="openCreateRepoModal()" style="padding:6px 11px;font-size:12px"><i class="fas fa-plus"></i> New</button>
+            </div>
+          </div>
+          <div id="dashRepos" style="overflow:hidden"><div class="loading"><div class="spinner"></div> Memuat...</div></div>
+        </div>
+      </div>
+
+      <!-- REPOS -->
+      <div class="page" id="page-repos">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <div class="tabs" id="repoTabs" style="flex:1;margin-bottom:0">
+            <div class="tab active" onclick="switchRepoTab('all',this)">Semua</div>
+            <div class="tab" onclick="switchRepoTab('public',this)">Public</div>
+            <div class="tab" onclick="switchRepoTab('private',this)">Private</div>
+            <div class="tab" onclick="switchRepoTab('fork',this)">Forks</div>
+          </div>
+          <button class="btn btn-outline" onclick="refreshRepos()" id="reposRefreshBtn" style="padding:7px 10px;font-size:13px;flex-shrink:0" title="Refresh"><i class="fas fa-rotate-right"></i></button>
+        </div>
+        <div id="reposList"></div>
+      </div>
+
+      <!-- REPO DETAIL -->
+      <div class="page" id="page-detail">
+        <div class="card" id="detailHeader"></div>
+        <div class="tabs" id="detailTabs">
+          <div class="tab active" onclick="switchDetailTab('files',this)">📁 Files</div>
+          <div class="tab" onclick="switchDetailTab('actions',this)">⚡ Actions</div>
+          <div class="tab" onclick="switchDetailTab('branches',this)">🌿 Branches</div>
+          <div class="tab" onclick="switchDetailTab('settings',this)">⚙️ Settings</div>
+        </div>
+        <div id="dp-files" class="detail-panel active"></div>
+        <div id="dp-actions" class="detail-panel"></div>
+        <div id="dp-branches" class="detail-panel"></div>
+        <div id="dp-settings" class="detail-panel"></div>
+      </div>
+
+      <!-- EDITOR -->
+      <div class="page" id="page-editor" style="padding-bottom:12px">
+
+        <!-- Top card: filename + commit + actions -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.05);overflow:hidden">
+          <!-- File header -->
+          <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border)">
+            <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#252526,#3a3a3c);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <i class="fas fa-file-code" style="color:#79c0ff;font-size:14px"></i>
+            </div>
+            <h3 id="editorTitle" style="font-size:14px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">File</h3>
+            <button class="btn btn-outline" onclick="backToFiles()" style="padding:7px 11px;font-size:12px;border-radius:9px" title="Kembali ke file list"><i class="fas fa-arrow-left"></i></button>
+            <button class="btn btn-outline" onclick="reloadEditorFile()" style="padding:7px 11px;font-size:12px;border-radius:9px" title="Reload file dari GitHub"><i class="fas fa-rotate-right"></i></button>
+            <button class="btn btn-green" onclick="saveFile()" style="padding:7px 13px;font-size:12px;font-weight:700;border-radius:9px"><i class="fas fa-floppy-disk"></i> Simpan</button>
+          </div>
+          <!-- Commit message -->
+          <div style="padding:10px 14px">
+            <div style="display:flex;align-items:center;gap:8px;background:var(--bg);border:1.5px solid var(--border2);border-radius:10px;padding:9px 13px;transition:border-color .2s" onfocusin="this.style.borderColor='var(--accent)'" onfocusout="this.style.borderColor='var(--border2)'">
+              <i class="fas fa-code-commit" style="color:var(--text4);font-size:12px;flex-shrink:0"></i>
+              <input type="text" id="commitMsg" placeholder="Commit message..." style="flex:1;border:none;background:transparent;outline:none;font-size:13px;color:var(--text)">
+            </div>
+          </div>
+        </div>
+
+        <!-- Code editor card -->
+        <div style="background:#1c1c1e;border-radius:var(--r);overflow:hidden;border:1px solid #2d2d2f;box-shadow:0 4px 20px rgba(0,0,0,.25)">
+
+          <!-- Mac-style title bar -->
+          <div style="display:flex;align-items:center;gap:10px;background:#252526;padding:10px 14px;border-bottom:1px solid #333">
+            <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+              <div class="code-dot" style="background:#ff5f57;cursor:pointer;width:12px;height:12px" onclick="backToFiles()" title="Kembali"></div>
+              <div class="code-dot" style="background:#febc2e;width:12px;height:12px"></div>
+              <div class="code-dot" style="background:#28c840;width:12px;height:12px"></div>
+            </div>
+            <span id="editorFname" style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#aaa;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;text-align:center">file.txt</span>
+            <div style="width:42px;flex-shrink:0"></div><!-- spacer for balance -->
+          </div>
+
+          <!-- Toolbar -->
+          <div id="editorToolbar" style="background:#2a2a2c;border-bottom:1px solid #333;padding:7px 12px;display:flex;align-items:center;gap:4px;overflow-x:auto">
+            <div style="display:flex;gap:3px;align-items:center;flex-shrink:0">
+              <button class="ed-btn" onclick="edUndo()" title="Undo (Ctrl+Z)"><i class="fas fa-undo"></i></button>
+              <button class="ed-btn" onclick="edRedo()" title="Redo (Ctrl+Y)"><i class="fas fa-redo"></i></button>
+            </div>
+            <div style="width:1px;background:#3a3a3c;margin:0 4px;height:20px;flex-shrink:0"></div>
+            <div style="display:flex;gap:3px;align-items:center;flex-shrink:0">
+              <button class="ed-btn" onclick="edSelectAll()" title="Pilih Semua"><i class="fas fa-object-group"></i></button>
+              <button class="ed-btn" onclick="edCopy()" title="Copy"><i class="fas fa-copy"></i></button>
+              <button class="ed-btn" onclick="edCut()" title="Cut"><i class="fas fa-cut"></i></button>
+            </div>
+            <div style="width:1px;background:#3a3a3c;margin:0 4px;height:20px;flex-shrink:0"></div>
+            <div style="display:flex;gap:3px;align-items:center;flex-shrink:0">
+              <button class="ed-btn" onclick="openFindReplace()" title="Find & Replace (Ctrl+H)"><i class="fas fa-search"></i></button>
+              <button class="ed-btn" onclick="edBeautify()" title="Format Kode"><i class="fas fa-magic"></i></button>
+              <button class="ed-btn" onclick="toggleLineNumbers()" title="Toggle Line Numbers" id="btnLineNum"><i class="fas fa-list-ol"></i></button>
+              <button class="ed-btn" onclick="toggleWordWrap()" title="Toggle Word Wrap" id="btnWrap"><i class="fas fa-align-left"></i></button>
+            </div>
+            <div style="flex:1"></div>
+            <div style="display:flex;gap:5px;align-items:center;flex-shrink:0">
+              <select id="edTabSize" onchange="setTabSize(this.value)" style="background:#333;color:#bbb;border:1px solid #444;border-radius:7px;padding:3px 7px;font-size:11px;cursor:pointer;outline:none">
+                <option value="2">2sp</option>
+                <option value="4" selected>4sp</option>
+                <option value="8">8sp</option>
+              </select>
+              <select id="edFontSize" onchange="setEdFontSize(this.value)" style="background:#333;color:#bbb;border:1px solid #444;border-radius:7px;padding:3px 7px;font-size:11px;cursor:pointer;outline:none">
+                <option value="11">11px</option>
+                <option value="13" selected>13px</option>
+                <option value="15">15px</option>
+                <option value="17">17px</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Find/Replace Bar -->
+          <div id="findBar" style="display:none;background:#252526;padding:8px 12px;border-bottom:1px solid #333;gap:6px;flex-wrap:wrap;align-items:center">
+            <input id="findInput" placeholder="Cari..." style="flex:1;min-width:100px;background:#1c1c1e;border:1px solid #444;border-radius:8px;color:#e5e5ea;padding:6px 10px;font-size:12px;outline:none;font-family:'JetBrains Mono',monospace">
+            <input id="replaceInput" placeholder="Ganti..." style="flex:1;min-width:100px;background:#1c1c1e;border:1px solid #444;border-radius:8px;color:#e5e5ea;padding:6px 10px;font-size:12px;outline:none;font-family:'JetBrains Mono',monospace">
+            <button onclick="doFind()" style="background:#007aff;color:#fff;border:none;border-radius:8px;padding:6px 11px;font-size:11px;cursor:pointer;font-weight:600">Cari</button>
+            <button onclick="doReplace()" style="background:#34c759;color:#fff;border:none;border-radius:8px;padding:6px 11px;font-size:11px;cursor:pointer;font-weight:600">Ganti</button>
+            <button onclick="doReplaceAll()" style="background:#ff9500;color:#fff;border:none;border-radius:8px;padding:6px 11px;font-size:11px;cursor:pointer;font-weight:600">Semua</button>
+            <button onclick="closeFindBar()" style="background:#3a3a3c;color:#aaa;border:none;border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center">✕</button>
+          </div>
+
+          <!-- Editor area -->
+          <div id="editorWrap" style="position:relative;display:flex;background:#1c1c1e;min-height:calc(100vh - 310px)">
+            <div id="lineNumbers" style="display:none;padding:14px 10px 14px 14px;background:#222224;color:#4a4a4f;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.7;text-align:right;user-select:none;min-width:46px;border-right:1px solid #2d2d2f;flex-shrink:0;overflow:hidden;white-space:nowrap"></div>
+            <textarea class="code-editor" id="codeEditor" spellcheck="false" style="flex:1;min-height:calc(100vh - 310px)" oninput="onEditorInput()" onscroll="syncLineScroll()" onkeydown="handleEditorKey(event)"></textarea>
+          </div>
+
+          <!-- Status bar -->
+          <div id="editorStatus" style="background:#1a3a5c;color:rgba(255,255,255,.85);padding:4px 14px;font-family:'JetBrains Mono',monospace;font-size:10.5px;display:flex;gap:14px;align-items:center;border-top:1px solid #0d2137">
+            <span id="edStatus-pos" style="display:flex;align-items:center;gap:4px"><i class="fas fa-location-crosshairs" style="opacity:.6;font-size:9px"></i> Baris 1, Kolom 1</span>
+            <span id="edStatus-chars"><i class="fas fa-font" style="opacity:.6;font-size:9px"></i> 0 karakter</span>
+            <span id="edStatus-lines"><i class="fas fa-bars" style="opacity:.6;font-size:9px"></i> 0 baris</span>
+            <span id="edStatus-sel" style="display:none;color:#79c0ff">✦ Dipilih: <span id="edStatus-selCount">0</span></span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- GISTS -->
+      <div class="page" id="page-gists">
+        <div class="card">
+          <div class="card-header">
+            <i class="fab fa-github-alt"></i><h3>Gists</h3>
+            <div class="card-header-actions">
+              <button class="btn btn-outline" onclick="loadGists()" id="gistsRefreshBtn" style="padding:6px 10px;font-size:12px" title="Refresh"><i class="fas fa-rotate-right"></i></button>
+              <button class="btn btn-accent" onclick="openCreateGistModal()" style="padding:6px 11px;font-size:12px"><i class="fas fa-plus"></i> New</button>
+            </div>
+          </div>
+          <div id="gistsList"><div class="loading"><div class="spinner"></div> Memuat...</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV (mobile only) -->
+  <nav class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <div class="bnav-item active" id="bnav-dashboard" onclick="showPage('dashboard')"><i class="fas fa-home"></i><span>Home</span></div>
+      <div class="bnav-item" id="bnav-repos" onclick="showPage('repos')"><i class="fas fa-book"></i><span>Repos</span></div>
+      <div class="bnav-item" id="bnav-new" onclick="openCreateRepoModal()"><i class="fas fa-plus-circle" style="font-size:22px;color:var(--accent)"></i><span>New</span></div>
+      <div class="bnav-item" id="bnav-gists" onclick="showPage('gists')"><i class="fab fa-github-alt"></i><span>Gists</span></div>
+      <div class="bnav-item" onclick="toggleSidebar()"><i class="fas fa-bars"></i><span>Menu</span></div>
+    </div>
+  </nav>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+  <div class="modal" id="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-header">
+      <h3 id="modalTitle"></h3>
+      <button class="btn-icon" onclick="closeModal()" style="margin-left:8px"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer" id="modalFooter"></div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+// STATE
+let TOKEN='',USER=null,REPOS=[],REPO=null,EDIT_FILE=null,BRANCH='main';
+let REPO_TAB='all',DETAIL_TAB='files',CUR_PATH=[];
+
+const GH='https://api.github.com';
+const H=()=>({'Authorization':`Bearer ${TOKEN}`,'Accept':'application/vnd.github+json','Content-Type':'application/json'});
+
+// API
+async function api(path,method='GET',body=null){
+  const o={method,headers:H()};
+  if(body)o.body=JSON.stringify(body);
+  const r=await fetch(GH+path,o);
+  if(r.status===204)return null;
+  const d=await r.json();
+  if(!r.ok)throw new Error(d.message||`HTTP ${r.status}`);
+  return d;
+}
+async function apiAll(path){
+  let pg=1,all=[];
+  while(true){
+    const sep=path.includes('?')?'&':'?';
+    const d=await api(`${path}${sep}per_page=100&page=${pg}`);
+    if(!d||!d.length)break;
+    all=[...all,...d];
+    if(d.length<100)break;
+    pg++;
+  }
+  return all;
+}
+
+// AUTH
+async function doLogin(){
+  const t=document.getElementById('tokenInput').value.trim();
+  if(!t){toast('Masukkan token dulu!','warn');return;}
+  TOKEN=t;
+  try{
+    USER=await api('/user');
+    localStorage.setItem('gh_tok',TOKEN);
+    initApp();
+  }catch(e){toast('Token tidak valid: '+e.message,'err');}
+}
+function doLogout(){
+  localStorage.removeItem('gh_tok');
+  TOKEN='';USER=null;REPOS=[];
+  document.getElementById('app').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+}
+async function initApp(){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('sName').textContent=USER.name||USER.login;
+  document.getElementById('sHandle').textContent='@'+USER.login;
+  if(USER.avatar_url){
+    document.getElementById('sAvatar').innerHTML=`<img src="${USER.avatar_url}" alt="">`;
+  } else {
+    document.getElementById('sAvatar').textContent=(USER.login||'G')[0].toUpperCase();
+  }
+  document.getElementById('st-fol').textContent=USER.followers;
+  document.getElementById('st-fing').textContent=USER.following;
+  document.getElementById('st-gists').textContent=USER.public_gists;
+  await loadRepos();
+  showPage('dashboard');
+}
+
+// REPOS
+async function loadRepos(){
+  try{
+    REPOS=await apiAll('/user/repos?sort=updated&type=all');
+    document.getElementById('st-repos').textContent=REPOS.length;
+    renderSidebarRepos(REPOS);
+    renderDashRepos(REPOS.slice(0,6));
+    renderReposList(REPOS);
+  }catch(e){toast('Gagal load repos: '+e.message,'err');}
+}
+function filterRepos(){
+  const q=document.getElementById('sSearch').value.toLowerCase();
+  renderSidebarRepos(REPOS.filter(r=>r.name.toLowerCase().includes(q)||r.full_name.toLowerCase().includes(q)));
+}
+function renderSidebarRepos(repos){
+  document.getElementById('sRepos').innerHTML=repos.slice(0,50).map(r=>`
+    <div class="srepo-item" onclick="openRepo('${r.full_name}');closeSidebar()">
+      <i class="fas fa-${r.fork?'code-fork':'book'}"></i>
+      <span class="srepo-name">${r.name}</span>
+      ${r.private?'<span class="pvt-badge">pvt</span>':''}
+    </div>`).join('')||'<div style="padding:12px 16px;font-size:13px;color:var(--text4)">Tidak ada repo</div>';
+}
+function renderDashRepos(repos){
+  const inner=repos.length?repos.map(repoCardHTML).join(''):`<div class="empty" style="padding:36px"><i class="fas fa-folder-open"></i><h3>Belum ada repo</h3></div>`;
+  document.getElementById('dashRepos').innerHTML=`<div class="repo-list-card" style="margin:0;border:none;border-radius:0;box-shadow:none">${inner}</div>`;
+}
+function renderReposList(repos){
+  let f=repos;
+  if(REPO_TAB==='public')f=repos.filter(r=>!r.private);
+  else if(REPO_TAB==='private')f=repos.filter(r=>r.private);
+  else if(REPO_TAB==='fork')f=repos.filter(r=>r.fork);
+  if(!f.length){
+    document.getElementById('reposList').innerHTML=`<div class="repo-list-card"><div class="empty"><i class="fas fa-folder-open"></i><h3>Kosong</h3><p>Tidak ada repo di kategori ini</p></div></div>`;
+    return;
+  }
+  document.getElementById('reposList').innerHTML=`<div class="repo-list-card">${f.map(repoCardHTML).join('')}</div>`;
+}
+function switchRepoTab(tab,el){
+  REPO_TAB=tab;
+  document.querySelectorAll('#repoTabs .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderReposList(REPOS);
+}
+
+function repoCardHTML(r){
+  const lc={'JavaScript':'#f1e05a','Python':'#3572A5','TypeScript':'#2b7489','C':'#555','C++':'#f34b7d','Shell':'#89e051','Makefile':'#427819','Go':'#00ADD8','Rust':'#dea584','Java':'#b07219','Kotlin':'#A97BFF','Swift':'#F05138','Dart':'#00B4AB'}[r.language||'']||'#8e8e93';
+  return`<div class="repo-card" onclick="openRepo('${r.full_name}')">
+    <div class="rc-icon">${r.fork?'🍴':'📁'}</div>
+    <div class="rc-info">
+      <div class="rc-name">${r.name}</div>
+      <div class="rc-desc">${r.description||'Tidak ada deskripsi'}</div>
+      <div class="rc-meta">
+        <span class="tag ${r.private?'prv':'pub'}">${r.private?'🔒 Private':'🌐 Public'}</span>
+        ${r.fork?'<span class="tag fork">Fork</span>':''}
+        ${r.language?`<span class="rc-mi"><span class="lang-dot" style="background:${lc}"></span>${r.language}</span>`:''}
+        <span class="rc-mi"><i class="fas fa-star"></i> ${r.stargazers_count}</span>
+        <span class="rc-mi"><i class="fas fa-code-fork"></i> ${r.forks_count}</span>
+        <span class="text-muted text-xs">${timeAgo(r.updated_at)}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+// REPO DETAIL
+async function openRepo(fullName){
+  document.querySelectorAll('.srepo-item').forEach(i=>i.classList.remove('active'));
+  // Show page FIRST so all DOM elements exist
+  showPage('detail');
+  document.querySelectorAll('#detailTabs .tab').forEach((t,i)=>t.classList.toggle('active',i===0));
+  document.querySelectorAll('.detail-panel').forEach((p,i)=>p.classList.toggle('active',i===0));
+  DETAIL_TAB='files';
+  document.getElementById('dp-files').innerHTML=`<div class="loading"><div class="spinner"></div> Memuat repo...</div>`;
+  document.getElementById('detailHeader').innerHTML=`<div style="padding:14px 16px"><div class="loading" style="padding:10px 0"><div class="spinner"></div> Memuat info...</div></div>`;
+  try{
+    REPO=await api(`/repos/${fullName}`);
+    BRANCH=REPO.default_branch||'main';
+    CUR_PATH=[];
+    renderDetailHeader();
+    setBreadcrumb(fullName,true);
+    loadFiles();
+  }catch(e){
+    document.getElementById('dp-files').innerHTML=`<div class="empty"><i class="fas fa-exclamation-circle" style="color:var(--red)"></i><h3>Gagal buka repo</h3><p>${e.message}</p></div>`;
+    document.getElementById('detailHeader').innerHTML='';
+    toast('Gagal buka repo: '+e.message,'err');
+  }
+}
+function renderDetailHeader(){
+  const r=REPO;
+  document.getElementById('detailHeader').innerHTML=`
+    <div class="card-header">
+      <i class="fas fa-book" style="color:var(--accent)"></i>
+      <h3>${r.name}</h3>
+      <div class="card-header-actions">
+        <span class="branch-pill"><i class="fas fa-code-branch"></i> ${r.default_branch}</span>
+        <span class="tag ${r.private?'prv':'pub'}">${r.private?'🔒':'🌐'}</span>
+        <a href="${r.html_url}" target="_blank" class="btn btn-outline" style="padding:6px 10px;font-size:12px"><i class="fab fa-github"></i></a>
+        <button class="btn btn-outline" onclick="refreshRepoDetail()" style="padding:6px 10px;font-size:12px" title="Refresh"><i class="fas fa-rotate-right"></i></button>
+        <button class="btn btn-red" style="padding:6px 10px;font-size:12px" onclick="confirmDeleteRepo()"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="flex flex-wrap gap-8" style="font-size:12.5px;color:var(--text4)">
+        <span><i class="fas fa-star"></i> ${r.stargazers_count}</span>
+        <span><i class="fas fa-code-fork"></i> ${r.forks_count}</span>
+        <span><i class="fas fa-eye"></i> ${r.watchers_count}</span>
+        <span><i class="fas fa-hdd"></i> ${(r.size/1024).toFixed(1)}MB</span>
+        ${r.language?`<span><i class="fas fa-code"></i> ${r.language}</span>`:''}
+        <span><i class="fas fa-clock"></i> ${timeAgo(r.updated_at)}</span>
+      </div>
+      ${r.description?`<p style="margin-top:8px;font-size:13px;color:var(--text2)">${r.description}</p>`:''}
+      ${r.homepage?`<a href="${r.homepage}" target="_blank" style="font-size:12px;display:inline-flex;align-items:center;gap:4px;margin-top:6px"><i class="fas fa-link"></i>${r.homepage}</a>`:''}
+    </div>`;
+}
+function switchDetailTab(tab,el){
+  DETAIL_TAB=tab;
+  document.querySelectorAll('#detailTabs .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.detail-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('dp-'+tab).classList.add('active');
+  if(tab==='files')loadFiles(CUR_PATH.join('/'));
+  else if(tab==='actions')loadActions();
+  else if(tab==='branches')loadBranches();
+  else if(tab==='settings')renderSettings();
+}
+
+// FILES
+async function loadFiles(path=''){
+  CUR_PATH=path?path.split('/').filter(Boolean):[];
+  const el=document.getElementById('dp-files');
+  el.innerHTML=`<div class="loading"><div class="spinner"></div> Memuat...</div>`;
+  try{
+    const apiPath=path?`/repos/${REPO.full_name}/contents/${path}?ref=${BRANCH}`:`/repos/${REPO.full_name}/contents?ref=${BRANCH}`;
+    const data=await api(apiPath);
+    renderFiles(Array.isArray(data)?data:[data],path);
+  }catch(e){
+    // 404 on root = empty repo
+    if(e.message&&(e.message.includes('empty')||e.message.includes('404')||e.message.includes('Not Found'))&&!path){
+      renderEmptyRepo();
+    } else {
+      el.innerHTML=`<div class="empty"><i class="fas fa-folder-open"></i><h3>Gagal memuat</h3><p>${e.message}</p></div>`;
+    }
+  }
+}
+
+function renderEmptyRepo(){
+  const el=document.getElementById('dp-files');
+  el.innerHTML=`<div class="card">
+    <div style="padding:32px 20px;text-align:center">
+      <div style="font-size:48px;margin-bottom:12px">📭</div>
+      <h3 style="font-size:17px;margin-bottom:6px">Repository Kosong</h3>
+      <p style="font-size:13px;color:var(--text4);margin-bottom:20px">Belum ada file. Mulai dengan menambahkan file pertama.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">
+        <button class="btn btn-accent" onclick="openCreateFileModal('')" style="padding:10px 16px;font-size:13px"><i class="fas fa-file-plus"></i> Buat File</button>
+        <button class="btn btn-outline" onclick="openUploadModal('')" style="padding:10px 16px;font-size:13px"><i class="fas fa-upload"></i> Upload File</button>
+        <button class="btn btn-green" onclick="initRepoWithReadme()" style="padding:10px 16px;font-size:13px"><i class="fab fa-markdown"></i> Init README</button>
+      </div>
+      <p style="margin-top:16px;font-size:11.5px;color:var(--text4)">Branch: <strong>${BRANCH}</strong> (repo baru perlu minimal 1 commit)</p>
+    </div>
+  </div>`;
+}
+
+async function initRepoWithReadme(){
+  try{
+    const content=`# ${REPO.name}\n\n${REPO.description||'Repository ini dibuat dengan GitHub Manager.'}\n`;
+    await api(`/repos/${REPO.full_name}/contents/README.md`,'PUT',{
+      message:'Initial commit: Add README.md',
+      content:encB64(content),
+      branch:BRANCH
+    });
+    toast('README.md dibuat! ✅','ok');
+    // Reload repo info to get updated branch
+    REPO=await api(`/repos/${REPO.full_name}`);
+    BRANCH=REPO.default_branch||'main';
+    loadFiles();
+  }catch(e){toast('Gagal: '+e.message,'err');}
+}
+function renderFiles(items,curPath){
+  const el=document.getElementById('dp-files');
+  const dirs=items.filter(i=>i.type==='dir').sort((a,b)=>a.name.localeCompare(b.name));
+  const files=items.filter(i=>i.type==='file').sort((a,b)=>a.name.localeCompare(b.name));
+  const all=[...dirs,...files];
+  let pb=`<div class="path-bar"><span onclick="loadFiles('')"><i class="fas fa-home"></i></span>`;
+  CUR_PATH.forEach((seg,i)=>{
+    const fp=CUR_PATH.slice(0,i+1).join('/');
+    pb+=`<i class="fas fa-chevron-right"></i><span onclick="loadFiles('${fp}')">${seg}</span>`;
+  });
+  pb+=`</div>`;
+  let fl='<div>';
+  if(curPath){
+    const parent=curPath.split('/').slice(0,-1).join('/');
+    fl+=`<div class="file-item" onclick="loadFiles('${parent}')"><i class="fas fa-arrow-up fi-file"></i><span class="fi-name">..</span></div>`;
+  }
+  fl+=all.map(item=>{
+    const esc=item.path.replace(/'/g,"\\'");
+    const icon=item.type==='dir'?'fa-folder fi-folder':getIcon(item.name);
+    const click=item.type==='dir'?`loadFiles('${esc}')`:`openFile('${esc}')`;
+    return`<div class="file-item" onclick="${click}">
+      <i class="fas ${icon}"></i>
+      <span class="fi-name">${item.name}</span>
+      ${item.size?`<span class="fi-size">${fmtSize(item.size)}</span>`:''}
+      ${item.type==='file'?`
+        <button class="fi-del" style="color:var(--accent);margin-right:2px" onclick="event.stopPropagation();openRenameModal('${esc}')" title="Rename"><i class="fas fa-pen"></i></button>
+        <button class="fi-del" onclick="event.stopPropagation();confirmDelFile('${esc}')" title="Hapus"><i class="fas fa-trash"></i></button>`
+      :`<button class="fi-del" style="color:var(--accent);margin-right:2px" onclick="event.stopPropagation();openRenameFolderModal('${esc}')" title="Rename Folder"><i class="fas fa-pen"></i></button>
+        <button class="fi-del" onclick="event.stopPropagation();confirmDelFolder('${esc}')" title="Hapus Folder"><i class="fas fa-trash"></i></button>`}
+    </div>`;
+  }).join('');
+  fl+=`</div>`;
+  const acts=`<div class="files-actions">
+    <button class="btn btn-accent" onclick="openCreateFileModal('${curPath}')" style="font-size:12px;padding:7px 11px"><i class="fas fa-plus"></i> File</button>
+    <button class="btn btn-outline" onclick="openCreateFolderModal('${curPath}')" style="font-size:12px;padding:7px 11px"><i class="fas fa-folder-plus"></i> Folder</button>
+    <button class="btn btn-outline" onclick="openUploadModal('${curPath}')" style="font-size:12px;padding:7px 11px"><i class="fas fa-upload"></i> Upload</button>
+    <button class="btn btn-outline" onclick="loadFiles('${curPath}')" style="font-size:12px;padding:7px 10px;margin-left:auto" title="Refresh"><i class="fas fa-rotate-right"></i></button>
+  </div>`;
+  el.innerHTML=`<div class="card">${pb}${fl}${acts}</div>`;
+}
+function getIcon(name){
+  const ext=name.split('.').pop().toLowerCase();
+  const n=name.toLowerCase();
+  if(n==='makefile'||n==='dockerfile')return'fa-file-code fi-file';
+  return{'md':'fa-file-alt fi-md','yml':'fa-file-code fi-yml','yaml':'fa-file-code fi-yml','sh':'fa-terminal fi-sh','py':'fa-file-code fi-file','js':'fa-file-code fi-file','ts':'fa-file-code fi-file','json':'fa-file-code fi-file','png':'fa-image fi-img','jpg':'fa-image fi-img','jpeg':'fa-image fi-img','gif':'fa-image fi-img','svg':'fa-image fi-img','txt':'fa-file-alt fi-file','pdf':'fa-file-pdf fi-file','zip':'fa-file-archive fi-file','c':'fa-file-code fi-file','cpp':'fa-file-code fi-file','h':'fa-file-code fi-file'}[ext]||'fa-file fi-file';
+}
+async function openFile(filePath){
+  EDIT_FILE={path:filePath,sha:''};
+  document.getElementById('editorTitle').textContent=filePath.split('/').pop();
+  document.getElementById('editorFname').textContent=filePath;
+  document.getElementById('commitMsg').value=`Update ${filePath.split('/').pop()} via GitHub Manager`;
+  document.getElementById('codeEditor').value='⏳ Memuat konten...';
+  showPage('editor');
+  try{
+    const d=await api(`/repos/${REPO.full_name}/contents/${encodeURIComponent(filePath).replace(/%2F/g,'/')}?ref=${BRANCH}`);
+    EDIT_FILE.sha=d.sha;
+    if(d.encoding==='base64' && d.content){
+      document.getElementById('codeEditor').value=decB64(d.content);
+    } else if(d.download_url){
+      // Fallback: fetch raw content for files too large for contents API
+      const raw=await fetch(d.download_url,{headers:{'Authorization':`Bearer ${TOKEN}`}});
+      document.getElementById('codeEditor').value=await raw.text();
+    } else {
+      document.getElementById('codeEditor').value=d.content||'// File kosong atau format tidak didukung';
+    }
+  }catch(e){
+    document.getElementById('codeEditor').value='// Gagal memuat: '+e.message;
+    toast('Gagal buka file: '+e.message,'err');
+  }
+}
+function decB64(b){
+  const clean = b.replace(/\s/g,'');
+  try{
+    const bytes = Uint8Array.from(atob(clean), c => c.charCodeAt(0));
+    return new TextDecoder('utf-8').decode(bytes);
+  }catch(e){
+    try{return atob(clean);}
+    catch(e2){return '// Gagal decode konten file';}
+  }
+}
+function encB64(str){
+  try{
+    const bytes=new TextEncoder().encode(str);
+    let b='';for(const b8 of bytes)b+=String.fromCharCode(b8);
+    return btoa(b);
+  }catch(e){return btoa(unescape(encodeURIComponent(str)));}
+}
+
+// ===== EDITOR ENGINE =====
+let ED_HISTORY=[],ED_FUTURE=[],ED_TAB_SIZE=4,ED_LINE_NUM=false,ED_WORD_WRAP=false;
+
+async function openFile(filePath){
+  EDIT_FILE={path:filePath,sha:''};
+  document.getElementById('editorTitle').textContent=filePath.split('/').pop();
+  document.getElementById('editorFname').textContent=filePath;
+  document.getElementById('commitMsg').value=`Update ${filePath.split('/').pop()} via GitHub Manager`;
+  const ta=document.getElementById('codeEditor');
+  ta.value='⏳ Memuat konten...';
+  ED_HISTORY=[];ED_FUTURE=[];
+  showPage('editor');
+  updateEditorStatus();
+  try{
+    const d=await api(`/repos/${REPO.full_name}/contents/${encodeURIComponent(filePath).replace(/%2F/g,'/')}?ref=${BRANCH}`);
+    EDIT_FILE.sha=d.sha;
+    let content='';
+    if(d.encoding==='base64' && d.content){
+      content=decB64(d.content);
+    } else if(d.download_url){
+      const raw=await fetch(d.download_url,{headers:{'Authorization':`Bearer ${TOKEN}`}});
+      content=await raw.text();
+    } else {
+      content=d.content||'';
+    }
+    ta.value=content;
+    ED_HISTORY=[content];ED_FUTURE=[];
+    updateEditorStatus();
+    updateLineNumbers();
+  }catch(e){
+    ta.value='// Gagal memuat: '+e.message;
+    toast('Gagal buka file: '+e.message,'err');
+  }
+}
+
+function onEditorInput(){
+  const ta=document.getElementById('codeEditor');
+  const val=ta.value;
+  // Push to undo history (debounced)
+  if(ED_HISTORY[ED_HISTORY.length-1]!==val){
+    ED_HISTORY.push(val);
+    if(ED_HISTORY.length>200)ED_HISTORY.shift();
+    ED_FUTURE=[];
+  }
+  updateEditorStatus();
+  updateLineNumbers();
+}
+
+function updateEditorStatus(){
+  const ta=document.getElementById('codeEditor');
+  if(!ta)return;
+  const val=ta.value;
+  const lines=val.split('\n');
+  const pos=ta.selectionStart;
+  let ln=1,col=1;
+  let cnt=0;
+  for(let i=0;i<lines.length;i++){
+    if(cnt+lines[i].length+1>pos){ln=i+1;col=pos-cnt+1;break;}
+    cnt+=lines[i].length+1;
+  }
+  const selLen=ta.selectionEnd-ta.selectionStart;
+  document.getElementById('edStatus-pos').textContent=`Baris ${ln}, Kol ${col}`;
+  document.getElementById('edStatus-chars').textContent=val.length+' karakter';
+  document.getElementById('edStatus-lines').textContent=lines.length+' baris';
+  const selEl=document.getElementById('edStatus-sel');
+  if(selLen>0){selEl.style.display='';document.getElementById('edStatus-selCount').textContent=selLen;}
+  else{selEl.style.display='none';}
+}
+
+function updateLineNumbers(){
+  const ln=document.getElementById('lineNumbers');
+  if(!ln||!ED_LINE_NUM)return;
+  const ta=document.getElementById('codeEditor');
+  const lines=ta.value.split('\n').length;
+  ln.innerHTML=Array.from({length:lines},(_,i)=>`<div style="line-height:1.7">${i+1}</div>`).join('');
+}
+
+function syncLineScroll(){
+  const ta=document.getElementById('codeEditor');
+  const ln=document.getElementById('lineNumbers');
+  if(ln&&ED_LINE_NUM)ln.scrollTop=ta.scrollTop;
+}
+
+function handleEditorKey(e){
+  const ta=document.getElementById('codeEditor');
+  // Tab key → insert spaces
+  if(e.key==='Tab'){
+    e.preventDefault();
+    const start=ta.selectionStart,end=ta.selectionEnd;
+    const spaces=' '.repeat(ED_TAB_SIZE);
+    if(start===end){
+      ta.value=ta.value.slice(0,start)+spaces+ta.value.slice(end);
+      ta.selectionStart=ta.selectionEnd=start+ED_TAB_SIZE;
+    } else {
+      // Indent selected lines
+      const lines=ta.value.split('\n');
+      let charCount=0,startLine=-1,endLine=-1;
+      for(let i=0;i<lines.length;i++){
+        if(charCount+lines[i].length+1>start&&startLine<0)startLine=i;
+        if(charCount+lines[i].length+1>end){endLine=i;break;}
+        charCount+=lines[i].length+1;
+      }
+      if(endLine<0)endLine=lines.length-1;
+      if(e.shiftKey){
+        // Unindent
+        for(let i=startLine;i<=endLine;i++){
+          lines[i]=lines[i].replace(new RegExp(`^ {1,${ED_TAB_SIZE}}`),'');
+        }
+      } else {
+        for(let i=startLine;i<=endLine;i++)lines[i]=spaces+lines[i];
+      }
+      ta.value=lines.join('\n');
+    }
+    onEditorInput();
+    return;
+  }
+  // Auto-close brackets
+  const pairs={'(':')','{':'}','[':']','"':'"',"'":"'",'`':'`'};
+  if(pairs[e.key]&&ta.selectionStart===ta.selectionEnd){
+    e.preventDefault();
+    const s=ta.selectionStart;
+    ta.value=ta.value.slice(0,s)+e.key+pairs[e.key]+ta.value.slice(s);
+    ta.selectionStart=ta.selectionEnd=s+1;
+    onEditorInput();
+    return;
+  }
+  // Enter → auto-indent
+  if(e.key==='Enter'){
+    e.preventDefault();
+    const s=ta.selectionStart;
+    const lineStart=ta.value.lastIndexOf('\n',s-1)+1;
+    const currentLine=ta.value.slice(lineStart,s);
+    const indent=currentLine.match(/^(\s*)/)[1];
+    // Extra indent after {, [, (
+    const extraIndent=currentLine.trimEnd().endsWith('{')||currentLine.trimEnd().endsWith('[')||currentLine.trimEnd().endsWith('(')?
+      ' '.repeat(ED_TAB_SIZE):'';
+    const insert='\n'+indent+extraIndent;
+    ta.value=ta.value.slice(0,s)+insert+ta.value.slice(ta.selectionEnd);
+    ta.selectionStart=ta.selectionEnd=s+insert.length;
+    onEditorInput();
+    return;
+  }
+}
+
+function edUndo(){
+  const ta=document.getElementById('codeEditor');
+  if(ED_HISTORY.length>1){
+    ED_FUTURE.push(ED_HISTORY.pop());
+    ta.value=ED_HISTORY[ED_HISTORY.length-1]||'';
+    updateEditorStatus();updateLineNumbers();
+    toast('↩ Undo','info');
+  }
+}
+function edRedo(){
+  const ta=document.getElementById('codeEditor');
+  if(ED_FUTURE.length>0){
+    const val=ED_FUTURE.pop();
+    ED_HISTORY.push(val);
+    ta.value=val;
+    updateEditorStatus();updateLineNumbers();
+    toast('↪ Redo','info');
+  }
+}
+function edSelectAll(){
+  const ta=document.getElementById('codeEditor');
+  ta.focus();
+  ta.select();
+  updateEditorStatus();
+  toast('Semua teks dipilih','info');
+}
+function edCopy(){
+  const ta=document.getElementById('codeEditor');
+  const txt=ta.selectionStart!==ta.selectionEnd?ta.value.slice(ta.selectionStart,ta.selectionEnd):ta.value;
+  navigator.clipboard.writeText(txt).then(()=>toast('Disalin! ✅','ok')).catch(()=>{
+    // fallback
+    ta.select();document.execCommand('copy');toast('Disalin! ✅','ok');
+  });
+}
+function edCut(){
+  const ta=document.getElementById('codeEditor');
+  const s=ta.selectionStart,e=ta.selectionEnd;
+  if(s===e){ta.select();document.execCommand('cut');toast('Cut! ✅','ok');return;}
+  const txt=ta.value.slice(s,e);
+  navigator.clipboard.writeText(txt).then(()=>{
+    ta.value=ta.value.slice(0,s)+ta.value.slice(e);
+    ta.selectionStart=ta.selectionEnd=s;
+    onEditorInput();toast('Cut! ✅','ok');
+  });
+}
+// Legacy copy function for toolbar button
+function copyEditor(){edCopy();}
+
+function edBeautify(){
+  const ta=document.getElementById('codeEditor');
+  const fname=(document.getElementById('editorFname').textContent||'').toLowerCase();
+  const ext=fname.split('.').pop();
+  let code=ta.value;
+  try{
+    if(ext==='json'){
+      code=JSON.stringify(JSON.parse(code),null,ED_TAB_SIZE);
+      ta.value=code;onEditorInput();toast('JSON diformat ✅','ok');
+    } else if(['js','ts','jsx','tsx'].includes(ext)){
+      code=basicJsBeautify(code,ED_TAB_SIZE);
+      ta.value=code;onEditorInput();toast('JS diformat ✅','ok');
+    } else if(['html','htm'].includes(ext)){
+      code=basicHtmlBeautify(code,ED_TAB_SIZE);
+      ta.value=code;onEditorInput();toast('HTML diformat ✅','ok');
+    } else if(['yml','yaml'].includes(ext)){
+      code=normalizeYamlIndent(code,ED_TAB_SIZE);
+      ta.value=code;onEditorInput();toast('YAML dirapikan ✅','ok');
+    } else {
+      // Generic: normalize indentation
+      code=normalizeIndent(code,ED_TAB_SIZE);
+      ta.value=code;onEditorInput();toast('Indentasi dinormalisasi ✅','ok');
+    }
+  }catch(e){toast('Format gagal: '+e.message,'err');}
+}
+
+function basicJsBeautify(code,spaces){
+  // Simple beautifier: fix indentation based on braces
+  const tab=' '.repeat(spaces);
+  let result='',indent=0,inStr=false,strChar='';
+  const lines=code.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+  return lines.map(line=>{
+    const trimmed=line.trim();
+    if(!trimmed)return'';
+    const opens=(trimmed.match(/[{[(]/g)||[]).length;
+    const closes=(trimmed.match(/[}\])]/g)||[]).length;
+    if(trimmed.match(/^[}\])]/)&&indent>0)indent=Math.max(0,indent-1);
+    const out=tab.repeat(indent)+trimmed;
+    if(opens>closes)indent+=opens-closes;
+    else if(closes>opens)indent=Math.max(0,indent-(closes-opens));
+    return out;
+  }).join('\n');
+}
+
+function basicHtmlBeautify(code,spaces){
+  const tab=' '.repeat(spaces);
+  const voids=new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
+  let result=[],indent=0;
+  // Split by tags
+  const parts=code.replace(/>\s*</g,'>\n<').split('\n');
+  parts.forEach(p=>{
+    const t=p.trim();
+    if(!t)return;
+    if(t.match(/^<\//)&&indent>0)indent--;
+    result.push(tab.repeat(indent)+t);
+    if(t.match(/^<[^\/!][^>]*[^\/]?>/)&&!t.match(/^<\//)&&!voids.has(t.replace(/<([a-zA-Z]+).*/,'$1').toLowerCase()))indent++;
+  });
+  return result.join('\n');
+}
+
+function normalizeYamlIndent(code,spaces){
+  // Just normalize to consistent indent
+  return code.replace(/\t/g,' '.repeat(spaces));
+}
+
+function normalizeIndent(code,spaces){
+  const tab=' '.repeat(spaces);
+  return code.replace(/\t/g,tab);
+}
+
+function toggleLineNumbers(){
+  ED_LINE_NUM=!ED_LINE_NUM;
+  const ln=document.getElementById('lineNumbers');
+  const btn=document.getElementById('btnLineNum');
+  ln.style.display=ED_LINE_NUM?'block':'none';
+  btn.style.background=ED_LINE_NUM?'#007aff':'#333';
+  if(ED_LINE_NUM)updateLineNumbers();
+}
+function toggleWordWrap(){
+  ED_WORD_WRAP=!ED_WORD_WRAP;
+  const ta=document.getElementById('codeEditor');
+  const btn=document.getElementById('btnWrap');
+  ta.style.whiteSpace=ED_WORD_WRAP?'pre-wrap':'pre';
+  ta.style.overflowX=ED_WORD_WRAP?'hidden':'auto';
+  btn.style.background=ED_WORD_WRAP?'#007aff':'#333';
+}
+function setTabSize(v){ED_TAB_SIZE=parseInt(v);document.getElementById('codeEditor').style.tabSize=v;document.getElementById('codeEditor').style.MozTabSize=v;}
+function setEdFontSize(v){document.getElementById('codeEditor').style.fontSize=v+'px';document.getElementById('lineNumbers').style.fontSize=v+'px';}
+
+// Find & Replace
+let FIND_LAST_IDX=0;
+function openFindReplace(){
+  const bar=document.getElementById('findBar');
+  bar.style.display=bar.style.display==='none'?'flex':'none';
+  if(bar.style.display==='flex')document.getElementById('findInput').focus();
+}
+function closeFindBar(){document.getElementById('findBar').style.display='none';}
+function doFind(){
+  const ta=document.getElementById('codeEditor');
+  const q=document.getElementById('findInput').value;
+  if(!q)return;
+  const val=ta.value;
+  const idx=val.indexOf(q,FIND_LAST_IDX+1);
+  if(idx>=0){
+    ta.setSelectionRange(idx,idx+q.length);
+    ta.focus();
+    FIND_LAST_IDX=idx;
+    toast(`Ditemukan di baris ${val.slice(0,idx).split('\n').length}`,'info');
+  } else {
+    // Wrap around
+    const idx2=val.indexOf(q,0);
+    if(idx2>=0){ta.setSelectionRange(idx2,idx2+q.length);ta.focus();FIND_LAST_IDX=idx2;toast('Kembali ke awal','info');}
+    else toast('Tidak ditemukan','warn');
+  }
+  updateEditorStatus();
+}
+function doReplace(){
+  const ta=document.getElementById('codeEditor');
+  const q=document.getElementById('findInput').value;
+  const r=document.getElementById('replaceInput').value;
+  if(!q)return;
+  const s=ta.selectionStart,e=ta.selectionEnd;
+  if(ta.value.slice(s,e)===q){
+    ta.value=ta.value.slice(0,s)+r+ta.value.slice(e);
+    ta.setSelectionRange(s,s+r.length);
+    onEditorInput();toast('1 diganti','ok');
+  } else doFind();
+}
+function doReplaceAll(){
+  const ta=document.getElementById('codeEditor');
+  const q=document.getElementById('findInput').value;
+  const r=document.getElementById('replaceInput').value;
+  if(!q)return;
+  const count=(ta.value.match(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'))||[]).length;
+  ta.value=ta.value.split(q).join(r);
+  onEditorInput();toast(`${count} instance diganti ✅`,'ok');
+}
+
+async function saveFile(){
+  if(!EDIT_FILE)return;
+  const content=document.getElementById('codeEditor').value;
+  const msg=document.getElementById('commitMsg').value||'Update via GitHub Manager';
+  try{
+    const body={message:msg,content:encB64(content),branch:BRANCH};
+    if(EDIT_FILE.sha)body.sha=EDIT_FILE.sha;
+    const resp=await api(`/repos/${REPO.full_name}/contents/${EDIT_FILE.path}`,'PUT',body);
+    EDIT_FILE.sha=resp?.content?.sha||EDIT_FILE.sha;
+    toast('File disimpan! ✅','ok');
+  }catch(e){toast('Gagal simpan: '+e.message,'err');}
+}
+function backToFiles(){
+  showPage('detail');
+  document.querySelectorAll('#detailTabs .tab').forEach((t,i)=>t.classList.toggle('active',i===0));
+  document.querySelectorAll('.detail-panel').forEach((p,i)=>p.classList.toggle('active',i===0));
+  DETAIL_TAB='files';
+  loadFiles(CUR_PATH.join('/'));
+}
+
+// ACTIONS
+async function loadActions(){
+  const el=document.getElementById('dp-actions');
+  el.innerHTML=`<div class="loading"><div class="spinner"></div> Memuat actions...</div>`;
+  try{
+    const [wfR,runR]=await Promise.all([api(`/repos/${REPO.full_name}/actions/workflows`),api(`/repos/${REPO.full_name}/actions/runs?per_page=20`)]);
+    renderActions(wfR?.workflows||[],runR?.workflow_runs||[]);
+  }catch(e){el.innerHTML=`<div class="empty"><i class="fas fa-play-circle"></i><h3>Gagal</h3><p>${e.message}</p></div>`;}
+}
+function renderActions(wfs,runs){
+  const el=document.getElementById('dp-actions');
+  const stCls=s=>({'success':'ok','failure':'fail','in_progress':'run','queued':'idle','cancelled':'idle','skipped':'idle'}[s]||'idle');
+  const stIcon=s=>({'success':'✅','failure':'❌','in_progress':'🔄','queued':'⏳','cancelled':'🚫','skipped':'⏭️'}[s]||'⏳');
+  const safeWfName=n=>n.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+
+  // WORKFLOW FILES
+  let h=`<div class="card" style="margin-bottom:12px">
+    <div class="card-header">
+      <i class="fas fa-list"></i><h3>Workflows (${wfs.length})</h3>
+      <button class="btn btn-outline" onclick="loadActions()" style="padding:6px 10px;font-size:12px;margin-left:auto" title="Refresh"><i class="fas fa-rotate-right"></i></button>
+      <button class="btn btn-accent" onclick="openCreateWfModal()" style="padding:6px 11px;font-size:12px"><i class="fas fa-plus"></i> Buat</button>
+    </div>`;
+  if(!wfs.length){
+    h+=`<div class="empty" style="padding:28px"><i class="fas fa-file-code"></i><h3>Belum ada workflow</h3><p>Buat file .github/workflows/*.yml</p></div>`;
+  } else {
+    h+=wfs.map(w=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 15px;border-bottom:1px solid var(--border)">
+      <div class="wf-dot ${w.state==='active'?'ok':'idle'}"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${w.name}</div>
+        <div style="font-size:10.5px;color:var(--text4);font-family:'JetBrains Mono',monospace;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${w.path}</div>
+      </div>
+      <button class="btn btn-outline" onclick="openFile('${w.path}')" style="padding:7px 11px;font-size:12px;flex-shrink:0" title="Edit"><i class="fas fa-edit"></i></button>
+      <button class="btn btn-green" onclick="triggerWf(${w.id},'${safeWfName(w.name)}')" style="padding:7px 11px;font-size:12px;flex-shrink:0" title="Run Workflow"><i class="fas fa-play"></i></button>
+    </div>`).join('');
+  }
+  h+=`</div>`;
+
+  // RUN HISTORY
+  h+=`<div class="card"><div class="card-header"><i class="fas fa-history"></i><h3>Run History</h3><button class="btn btn-outline" onclick="loadActions()" style="padding:6px 10px;font-size:12px;margin-left:auto" title="Refresh"><i class="fas fa-rotate-right"></i></button></div>`;
+  if(!runs.length){
+    h+=`<div class="empty" style="padding:28px"><i class="fas fa-clock"></i><h3>Belum ada run</h3></div>`;
+  } else {
+    h+=runs.map(r=>{
+      const st=r.conclusion||r.status;
+      return`<div style="display:flex;align-items:center;gap:10px;padding:12px 15px;border-bottom:1px solid var(--border)">
+        <div class="wf-dot ${stCls(st)}"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+            ${r.name} <span style="font-size:10.5px;color:var(--text4);font-family:'JetBrains Mono',monospace">#${r.run_number}</span>
+          </div>
+          <div style="font-size:11.5px;color:var(--text4);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.head_branch} · ${r.event} · ${timeAgo(r.created_at)}</div>
+        </div>
+        <span style="font-size:16px;flex-shrink:0;line-height:1" title="${st}">${stIcon(st)}</span>
+        ${r.conclusion==='success'?`<button class="btn btn-outline" onclick="getArtifacts(${r.id})" style="padding:7px 10px;font-size:12px;flex-shrink:0" title="Download Artifacts"><i class="fas fa-download"></i></button>`:'<div style="width:36px"></div>'}
+        <button class="btn btn-red" onclick="cancelRun(${r.id})" style="padding:7px 10px;font-size:12px;flex-shrink:0" title="Stop"><i class="fas fa-stop"></i></button>
+      </div>`;
+    }).join('');
+  }
+  h+=`</div>`;
+  el.innerHTML=h;
+}
+async function triggerWf(id,name){
+  try{await api(`/repos/${REPO.full_name}/actions/workflows/${id}/dispatches`,'POST',{ref:BRANCH,inputs:{}});toast(`"${name}" di-trigger! 🚀`,'ok');setTimeout(loadActions,2000);}
+  catch(e){toast('Gagal: '+e.message,'err');}
+}
+async function cancelRun(id){
+  try{await api(`/repos/${REPO.full_name}/actions/runs/${id}/cancel`,'POST');toast('Dibatalkan','info');setTimeout(loadActions,1000);}
+  catch(e){toast('Gagal: '+e.message,'err');}
+}
+async function getArtifacts(runId){
+  try{
+    const d=await api(`/repos/${REPO.full_name}/actions/runs/${runId}/artifacts`);
+    const arts=d?.artifacts||[];
+    if(!arts.length){toast('Tidak ada artifacts','warn');return;}
+    showModal('📦 Artifacts',`
+      <p class="text-sm text-muted" style="margin-bottom:12px">${arts.length} artifact(s) tersedia:</p>
+      ${arts.map(a=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg4);border-radius:9px;margin-bottom:8px">
+          <i class="fas fa-file-archive" style="color:var(--accent);font-size:16px;flex-shrink:0"></i>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.name}</div>
+            <div class="text-xs text-muted">${fmtSize(a.size_in_bytes)} · ${timeAgo(a.created_at)}</div>
+          </div>
+          <button class="btn btn-accent" style="padding:7px 11px;font-size:12px;flex-shrink:0" onclick="downloadArtifact(${a.id},'${a.name}')">
+            <i class="fas fa-download"></i>
+          </button>
+        </div>`).join('')}`,[]);
+  }catch(e){toast('Gagal: '+e.message,'err');}
+}
+
+async function downloadArtifact(artifactId, artifactName){
+  toast(`Mengunduh ${artifactName}...`,'info');
+  try{
+    // Get the download URL via API (authenticated)
+    const resp = await fetch(`${GH}/repos/${REPO.full_name}/actions/artifacts/${artifactId}/zip`,{
+      headers: H(),
+      redirect: 'follow'
+    });
+    if(!resp.ok){
+      // GitHub redirects to a signed S3 URL - get the redirect URL
+      const text = await resp.text();
+      toast('Buka link download di browser: '+resp.url,'info');
+      window.open(`https://nightly.link/${REPO.full_name}/actions/artifacts/${artifactId}.zip`,'_blank');
+      return;
+    }
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = artifactName+'.zip'; a.click();
+    URL.revokeObjectURL(url);
+    toast(`${artifactName} berhasil diunduh! ✅`,'ok');
+  }catch(e){
+    // Fallback: open nightly.link which provides unauthenticated artifact downloads
+    toast('Membuka link download...','info');
+    window.open(`https://nightly.link/${REPO.full_name}/actions/artifacts/${artifactId}.zip`,'_blank');
+  }
+}
+
+// BRANCHES
+async function loadBranches(){
+  const el=document.getElementById('dp-branches');
+  el.innerHTML=`<div class="loading"><div class="spinner"></div></div>`;
+  try{
+    const branches=await api(`/repos/${REPO.full_name}/branches?per_page=100`);
+    if(!branches||!branches.length){
+      el.innerHTML=`<div class="card">
+        <div class="card-header"><i class="fas fa-code-branch"></i><h3>Branches (0)</h3>
+          <button class="btn btn-accent" onclick="openCreateBranchModal()" style="padding:6px 11px;font-size:12px"><i class="fas fa-plus"></i> Baru</button>
+        </div>
+        <div style="padding:24px;text-align:center">
+          <div style="font-size:36px;margin-bottom:10px">🌱</div>
+          <p style="font-size:13px;color:var(--text4)">Belum ada branch. Repository mungkin masih kosong.</p>
+          <button class="btn btn-green" onclick="initRepoWithReadme()" style="margin-top:12px;padding:9px 16px;font-size:13px"><i class="fab fa-markdown"></i> Init dengan README</button>
+        </div>
+      </div>`;
+      return;
+    }
+    el.innerHTML=`<div class="card">
+      <div class="card-header"><i class="fas fa-code-branch"></i><h3>Branches (${branches.length})</h3>
+        <button class="btn btn-outline" onclick="loadBranches()" style="padding:6px 10px;font-size:12px;margin-left:auto" title="Refresh"><i class="fas fa-rotate-right"></i></button>
+        <button class="btn btn-accent" onclick="openCreateBranchModal()" style="padding:6px 11px;font-size:12px"><i class="fas fa-plus"></i> Baru</button>
+      </div>
+      ${branches.map(b=>`<div class="wf-item">
+        <i class="fas fa-code-branch" style="color:var(--accent)"></i>
+        <div class="wf-info">
+          <div class="wf-name">${b.name} ${b.name===REPO.default_branch?'<span class="tag pub" style="font-size:10px">default</span>':''}</div>
+          <div class="wf-meta mono" style="font-size:11px">${b.commit.sha.substring(0,8)}</div>
+        </div>
+        <div class="wf-acts">
+          <button class="btn btn-outline" onclick="BRANCH='${b.name}';toast('Active branch: ${b.name}','info');updateBranchPill()" style="padding:6px 9px;font-size:11.5px">Checkout</button>
+          ${b.name!==REPO.default_branch?`<button class="btn btn-red" onclick="delBranch('${b.name}')" style="padding:6px 9px;font-size:11px"><i class="fas fa-trash"></i></button>`:''}
+        </div>
+      </div>`).join('')}
+    </div>`;
+  }catch(e){
+    // Empty repo - branches API returns 409
+    if(e.message&&(e.message.includes('409')||e.message.includes('empty')||e.message.includes('Git Repository is empty'))){
+      el.innerHTML=`<div class="card">
+        <div style="padding:28px;text-align:center">
+          <div style="font-size:36px;margin-bottom:10px">🌱</div>
+          <h3>Repository Kosong</h3>
+          <p style="font-size:13px;color:var(--text4);margin-top:6px">Buat file pertama untuk menginisialisasi branch default.</p>
+          <button class="btn btn-green" onclick="switchDetailTab('files',document.querySelector('#detailTabs .tab'));initRepoWithReadme()" style="margin-top:12px;padding:9px 16px;font-size:13px"><i class="fab fa-markdown"></i> Init README</button>
+        </div>
+      </div>`;
+    } else {
+      el.innerHTML=`<div class="empty"><i class="fas fa-code-branch"></i><h3>Gagal</h3><p>${e.message}</p></div>`;
+    }
+  }
+}
+function updateBranchPill(){
+  const pill=document.querySelector('.branch-pill');
+  if(pill)pill.innerHTML=`<i class="fas fa-code-branch"></i> ${BRANCH}`;
+}
+async function delBranch(name){
+  if(!confirm(`Hapus branch "${name}"?`))return;
+  try{await api(`/repos/${REPO.full_name}/git/refs/heads/${name}`,'DELETE');toast(`"${name}" dihapus`,'ok');loadBranches();}
+  catch(e){toast('Gagal: '+e.message,'err');}
+}
+
+// SETTINGS
+function renderSettings(){
+  const r=REPO;
+  document.getElementById('dp-settings').innerHTML=`<div class="grid-2">
+    <div class="card">
+      <div class="card-header"><i class="fas fa-cog"></i><h3>Edit Repo</h3></div>
+      <div class="card-body">
+        <div class="f-group"><label>Nama</label><input type="text" id="sRepoName" value="${r.name}"></div>
+        <div class="f-group"><label>Deskripsi</label><input type="text" id="sRepoDesc" value="${r.description||''}"></div>
+        <div class="f-group"><label>Homepage</label><input type="text" id="sRepoUrl" value="${r.homepage||''}"></div>
+        <div class="f-group"><label>Visibilitas</label><select id="sRepoPrivate"><option value="false" ${!r.private?'selected':''}>🌐 Public</option><option value="true" ${r.private?'selected':''}>🔒 Private</option></select></div>
+        <button class="btn btn-accent" onclick="saveSettings()"><i class="fas fa-save"></i> Simpan</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><i class="fas fa-skull"></i><h3>Danger Zone</h3></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+        <p class="text-sm text-muted">Tindakan ini tidak dapat dibatalkan!</p>
+        <button class="btn btn-outline" onclick="archiveRepo()"><i class="fas fa-archive"></i> Arsipkan</button>
+        <button class="btn btn-red" onclick="confirmDeleteRepo()"><i class="fas fa-trash"></i> Hapus Repository</button>
+      </div>
+    </div>
+  </div>`;
+}
+async function saveSettings(){
+  try{
+    const updated=await api(`/repos/${REPO.full_name}`,'PATCH',{name:document.getElementById('sRepoName').value,description:document.getElementById('sRepoDesc').value,homepage:document.getElementById('sRepoUrl').value,private:document.getElementById('sRepoPrivate').value==='true'});
+    REPO=updated;toast('Disimpan ✅','ok');await loadRepos();renderDetailHeader();
+  }catch(e){toast('Gagal: '+e.message,'err');}
+}
+async function archiveRepo(){
+  if(!confirm('Arsipkan repo ini?'))return;
+  try{await api(`/repos/${REPO.full_name}`,'PATCH',{archived:true});toast('Diarsipkan','ok');}
+  catch(e){toast('Gagal: '+e.message,'err');}
+}
+function confirmDeleteRepo(){
+  showModal('⚠️ Hapus Repository',`
+    <p class="text-sm" style="margin-bottom:10px">Hapus <strong>${REPO.full_name}</strong>? Tindakan ini <strong>tidak bisa dibatalkan!</strong></p>
+    <div class="f-group"><label>Ketik nama repo untuk konfirmasi</label><input type="text" id="delConfirm" placeholder="${REPO.name}"></div>`,
+    [{label:'Batal',cls:'btn-outline',fn:'closeModal()'},{label:'Hapus Permanen',cls:'btn-red',fn:'doDeleteRepo()'}]);
+}
+async function doDeleteRepo(){
+  if(document.getElementById('delConfirm').value!==REPO.name){toast('Nama tidak cocok!','err');return;}
+  try{
+    await api(`/repos/${REPO.full_name}`,'DELETE');
+    toast('Repository dihapus','ok');closeModal();
+    REPOS=REPOS.filter(r=>r.full_name!==REPO.full_name);REPO=null;
+    renderSidebarRepos(REPOS);renderReposList(REPOS);renderDashRepos(REPOS.slice(0,6));
+    showPage('repos');
+  }catch(e){toast('Gagal: '+e.message,'err');}
+}
+
+// GISTS
+async function loadGists(){
+  try{
+    const gists=await apiAll('/gists');
+    const el=document.getElementById('gistsList');
+    if(!gists.length){el.innerHTML=`<div class="empty"><i class="fab fa-github-alt"></i><h3>Belum ada gists</h3></div>`;return;}
+    el.innerHTML=gists.map(g=>{
+      const files=Object.keys(g.files);
+      return`<div class="wf-item">
+        <i class="fas fa-file-code" style="color:var(--accent);font-size:16px;flex-shrink:0"></i>
+        <div class="wf-info">
+          <div class="wf-name">${files[0]||'Untitled'}${files.length>1?` <span class="text-xs text-muted">+${files.length-1}</span>`:''}</div>
+          <div class="wf-meta">${g.description||'No description'} · ${timeAgo(g.updated_at)}</div>
+        </div>
+        <div class="wf-acts">
+          <a href="${g.html_url}" target="_blank" class="btn btn-outline" style="padding:6px 9px;font-size:11px"><i class="fab fa-github"></i></a>
+          <button class="btn btn-red" onclick="delGist('${g.id}')" style="padding:6px 9px;font-size:11px"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){toast('Gagal load gists: '+e.message,'err');}
+}
+async function delGist(id){
+  if(!confirm('Hapus gist ini?'))return;
+  try{await api(`/gists/${id}`,'DELETE');toast('Gist dihapus','ok');loadGists();}
+  catch(e){toast('Gagal: '+e.message,'err');}
+}
+
+// MODALS
+function openCreateRepoModal(){
+  showModal('🆕 Repo Baru',`
+    <div class="f-group"><label>Nama *</label><input type="text" id="nrName" placeholder="my-repo"></div>
+    <div class="f-group"><label>Deskripsi</label><input type="text" id="nrDesc" placeholder="Deskripsi..."></div>
+    <div class="f-group"><label>Visibilitas</label><select id="nrPvt"><option value="false">🌐 Public</option><option value="true">🔒 Private</option></select></div>
+    <div class="f-group"><label>Initialize</label><select id="nrInit"><option value="true">✅ Add README</option><option value="false">❌ Empty</option></select></div>`,
+    [{label:'Batal',cls:'btn-outline',fn:'closeModal()'},{label:'Buat',cls:'btn-accent',fn:'doCreateRepo()'}]);
+}
+async function doCreateRepo(){
+  const name=document.getElementById('nrName').value.trim();
+  if(!name){toast('Nama wajib!','warn');return;}
+  try{
+    const r=await api('/user/repos','POST',{name,description:document.getElementById('nrDesc').value,private:document.getElementById('nrPvt').value==='true',auto_init:document.getElementById('nrInit').value==='true'});
+    toast(`"${r.name}" dibuat! 🎉`,'ok');closeModal();await loadRepos();openRepo(r.full_name);
+  }catch(e){toast('Gagal: '+e.message,'err');}
+}
+function openCreateFileModal(base=''){
+  showModal('📄 File Baru',`
+    <div class="f-group">
+      <label>Nama File <span style="color:var(--red)">*</span></label>
+      <input type="text" id="nfName" placeholder="Contoh: index.html, README.md, main.yml" autocomplete="off" style="font-family:'JetBrains Mono',monospace">
+      <div style="font-size:11.5px;color:var(--text4);margin-top:5px"><i class="fas fa-info-circle" style="color:var(--accent)"></i> Isi nama file beserta ekstensinya (cth: <code style="background:var(--bg3);padding:1px 5px;border-radius:4px">script.sh</code>)</div>
+    </div>
+    <div class="f-group">
+      <label>Lokasi / Folder <span style="font-weight:400;color:var(--text4)">(opsional)</span></label>
+      <input type="text" id="nfFolder" value="${base||''}" placeholder="Contoh: src/utils  atau  .github/workflows" autocomplete="off" style="font-family:'JetBrains Mono',monospace">
+      <div style="font-size:11.5px;color:var(--text4);margin-top:5px"><i class="fas fa-info-circle" style="color:var(--accent)"></i> Kosongkan untuk simpan di root repo. Folder baru dibuat otomatis.</div>
+    </div>
+    <div class="f-group"><label>Commit Message</label><input type="text" id="nfMsg" value="Add new file via GitHub Manager"></div>
+    <div class="f-group"><label>Konten <span style="font-weight:400;color:var(--text4)">(opsional)</span></label><textarea id="nfContent" placeholder="# Isi konten file di sini..." style="min-height:120px"></textarea></div>`,
+    [{label:'Batal',cls:'btn-outline',fn:'closeModal()'},{label:'Buat',cls:'btn-green',fn:'doCreateFile()'}]);
+  setTimeout(()=>{const inp=document.getElementById('nfName');if(inp)inp.focus();},100);
+}
+async function doCreateFile(){
+  const name=document.getElementById('nfName').value.trim();
+  const folder=(document.getElementById('nfFolder').value.trim()).replace(/^\/+|\/+$/g,'');
+  if(!name){toast('Nama file wajib diisi!','warn');document.getElementById('nfName').focus();return;}
+  if(name.includes('/')){toast('Nama file tidak boleh mengandung "/". Gunakan kolom Lokasi untuk subfolder.','warn');return;}
+  const path=folder?`${folder}/${name}`:name;
+  try{
+    const body={message:document.getElementById('nfMsg').value||'Add file',content:encB64(document.getElementById('nfContent').value||''),branch:BRANCH};
+    await api(`/repos/${REPO.full_name}/contents/${path}`,'PUT',body);
+    toast(`"${path}" dibuat ✅`,'ok');closeModal();
+    if(REPO.size===0){REPO=await api(`/repos/${REPO.full_name}`);BRANCH=REPO.default_branch||'main';}
+    loadFiles(CUR_PATH.join('/'));
+  }catch(e){toast('Gagal: '+e.message,'err');}
+}
+
+// CREATE FOLDER (GitHub doesn't support empty dirs - create a .gitkeep inside)
+function openCreateFolderModal(base=''){
+  showModal('📁 Folder Baru',`
+    <div class="f-group"><label>Nama Folder</label><input type="text" id="nfolName" placeholder="my-folder"></div>
+    <p class="text-xs text-muted" style="margin-bottom:8px">GitHub tidak mendukung folder kosong, akan dibuat file <code>.gitkeep</code> di dalamnya</p>
+    <div class="f-group"><label>Commit Message</label><input type="text" id="nfolMsg" value="Add folder via GitHub Manager"></div>`,
+    [{label:'Batal',cls:'btn-outline',fn:'closeModal()'},{label:'Buat',cls:'btn-accent',fn:`doCreateFolder('${base}')`}]);
+}
+async function doCreateFolder(base){
+  const name=document.getElementById('nfolName').value.trim().replace(/\//g,'');
+  if(!name){toast('Nama wajib!','warn');return;}
+  const path=(base?base+'/':'')+name+'/.gitkeep';
+  try{
+    await api(`/repos/${REPO.full_name}/contents/${path}`,'PUT',{
+      message:document.getElementById('nfolMsg').value||'Add folder',
+      content:encB64(''),
+      branch:BRANCH
+    });
+    toast(`Folder "${name}" dibuat ✅`,'ok');closeModal();loadFiles(CUR_PATH.join('/'));
+  }catch(e){toast('Gagal: '+e.message,'err');}
+}
+
+// CONFIRM DELETE FOLDER (recursively delete all files inside)
+function confirmDelFolder(dirPath){
+  showModal('🗑️ Hapus Folder',`
+    <p class="text-sm" style="margin-bottom:8px">Hapus folder <strong>${dirPath}</strong> beserta semua isinya?</p>
+    <p class="text-xs text-muted">⚠️ Semua file di dalam folder akan dihapus. Tindakan ini tidak bisa dibatalkan.</p>
+    <div class="f-group" style="margin-top:10px"><label>Commit Message</label><input type="text" id="dfolMsg" value="Delete folder ${dirPath}"></div>`,
+    [{label:'Batal',cls:'btn-outline',fn:'closeModal()'},{label:'Hapus Semua',cls:'btn-red',fn:`doDelFolder('${dirPath}')`}]);
+}
+async function doDelFolder(dirPath){
+  const msg=document.getElementById('dfolMsg').value||`Delete ${dirPath}`;
+  closeModal();
+  toast('Menghapus folder...','info');
+  try{
+    // Get all files recursively
+    const files=await getAllFilesInDir(dirPath);
+    if(!files.length){toast('Folder kosong','warn');return;}
+    // Delete each file
+    let deleted=0;
+    for(const f of files){
+      await api(`/repos/${REPO.full_name}/contents/${f.path}`,'DELETE',{message:msg,sha:f.sha,branch:BRANCH});
+      deleted++;
+    }
+    toast(`${deleted} file dihapus ✅`,'ok');loadFiles(CUR_PATH.join('/'));
+  }catch(e){toast('Gagal: '+e.message,'err');}
+}
+async function getAllFilesInDir(dir){
+  const files=[];
+  try{
+    const items=await api(`/repos/${REPO.full_name}/contents/${dir}?ref=${BRANCH}`);
+    const arr=Array.isArray(items)?items:[items];
+    for(const item of arr){
+      if(item.type==='file')files.push(item);
+      else if(item.type==='dir'){
+        const sub=await getAllFilesInDir(item.path);
+        files.push(...sub);
+      }
+    }
+  }catch(e){}
+  return files;
+}
+
+// RENAME FOLDER
+function openRenameFolderModal(dirPath){
+  const oldName=dirPath.split('/').pop();
+  const parentDir=dirPath.includes('/')?dirPath.substring(0,dirPath.lastIndexOf('/')):'';
+  showModal('✏️ Rename Folder',`
+    <div class="f-group">
+      <label>Nama Baru <span style="color:var(--red)">*</span></label>
+      <input type="text" id="rfNewName" value="${oldName}" autocomplete="off" style="font-family:'JetBrains Mono',monospace">
+    </div>
+    <div class="f-group">
+      <label>Commit Message</label>
+      <input type="text" id="rfMsg" value="Rename folder ${oldName}">
+    </div>
+    <p class="text-xs text-muted" style="margin-top:4px">⚠️ Semua file di dalam folder akan dipindahkan ke nama baru. Ini bisa memakan waktu jika folder berisi banyak file.</p>
+    <p class="text-xs text-muted" style="margin-top:4px">Path lama: <span class="mono">${dirPath}/</span></p>`,
+    [{label:'Batal',cls:'btn-outline',fn:'closeModal()'},{label:'Rename',cls:'btn-accent',fn:`doRenameFolder('${dirPath}','${parentDir}')`}]);
+  setTimeout(()=>{const inp=document.getElementById('rfNewName');if(inp){inp.focus();inp.select();}},100);
+}
+async function doRenameFolder(oldDirPath, parentDir){
+  const newName=document.getElementById('rfNewName').value.trim().replace(/\//g,'');
+  const msg=document.getElementById('rfMsg').value||`Rename folder ${oldDirPath.split('/').pop()} to ${newName}`;
+  const oldName=oldDirPath.split('/').pop();
+  if(!newName){toast('Nama baru wajib diisi!','warn');return;}
+  if(newName===oldName){toast('Nama sama, tidak ada perubahan','warn');return;}
+  const newDirPath=parentDir?`${parentDir}/${newName}`:newName;
+  closeModal();
+  toast('Memindahkan file...','info');
+  try{
+    const files=await getAllFilesInDir(oldDirPath);
+    if(!files.length){toast('Folder kosong, tidak ada file untuk dipindahkan','warn');return;}
+    let moved=0;
+    for(const f of files){
+      // Compute new path: replace old dir prefix with new dir
+      const relPath=f.path.substring(oldDirPath.length+1); // path relative to old folder
+      const newPath=`${newDirPath}/${relPath}`;
+      // Get content
+      const d=await api(`/repos/${REPO.full_name}/contents/${f.path}?ref=${BRANCH}`);
+      // Create at new path
+      await api(`/repos/${REPO.full_name}/contents/${newPath}`,'PUT',{
+        message:msg,
+        content:d.content.replace(/\n/g,''),
+        branch:BRANCH
+      });
+      // Delete from old path
+      await api(`/repos/${REPO.full_name}/contents/${f.path}`,'DELETE',{
+        message:msg,
+        sha:f.sha,
+        branch:BRANCH
+      });
+      moved++;
+    }
+    toast(`Folder berhasil direname ke "${newName}" ✅ (${moved} file dipindahkan)`,'ok');
+    loadFiles(CUR_PATH.join('/'));
+  }catch(e){toast('Gagal rename folder: '+e.message,'err');}
+}
+
+function openCreateWfModal(){
+  const tpl=`name: Build\n\non:\n  push:\n    branches: [ main ]\n  workflow_dispatch:\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - name: Build\n        run: echo "Building..."\n      - uses: actions/upload-artifact@v4\n        with:\n          name: build-output\n          path: ./output/`;
+  showModal('⚡ Workflow Baru',`
+    <div class="f-group"><label>Nama File</label><input type="text" id="wfName" value="main.yml"></div>
+    <div class="f-group"><label>Konten YAML</label><textarea id="wfContent" style="min-height:220px;font-family:'JetBrains Mono',monospace;font-size:12px">${tpl}</textarea></div>`,
+    [{label:'Batal',cls:'btn-outline',fn:'closeModal()'},{label:'Buat',cls:'btn-green',fn:'doCreateWf()'}]);
+}
+async function doCreateWf(){
+  const fname=document.getElementById('wfName').value.trim();
+  if(!fname){toast('Nama wajib!','warn');return;}
+  const path=`.github/workflows/${fname.endsWith('.yml')||fname.endsWith('.yaml')?fname:fname+'.yml'}`;
+  try{
+    let sha=null;
+    try{const ex=await api(`/repos/${REPO.full_name}/contents/${path}`);sha=ex.sha;}catch{}
+    const body={message:`Add ${path}`,content:encB64(document.getElementById('wfContent').value),branch:BRANCH};
+    if(sha)body.sha=sha;
+    await api(`/repos/${REPO.full_name}/contents/${path}`,'PUT',body);
+    toast(`Workflow dibuat! 🚀`,'ok');closeModal();loadActions();
+  }catch(e){toast('Gagal: '+e.message,'err');}
+}
+function openCreateBranchModal(){
+  showModal('🌿 Branch Baru',`
+    <div class="f-group"><label>Nama Branch</label><input type="text" id="nbName" placeholder="feature/my-feature"></div>
+    <div class="f-group"><label>Dari Branch</label><input type="text" id="nbFrom" value="${REPO?.default_branch||'main'}"></div>`,
+    [{label:'Batal',cls:'btn-outline',fn:'closeModal()'},{label:'Buat',cls:'btn-accent',fn:'doCreateBranch()'}]);
+}
+async function doCreateBranch(){
+  const name=document.getElementById('nbName').value.trim(),from=document.getElementById('nbFrom').value.trim();
+  if(!name){toast('Nama wajib!','warn');return;}
+  try{
+    const ref=await api(`/repos/${REPO.full_name}/git/ref/heads/${from}`);
+    await api(`/repos/${REPO.full_name}/git/refs`,'POST',{ref:`refs/heads/${name}`,sha:ref.object.sha});
+    toast(`"${name}" dibuat ✅`,'ok');closeModal();loadBranches();
+  }catch(e){toast('Gagal: '+e.message,'err');}
+}
+// ═══════════════════════════════════════════════
+// UPLOAD SYSTEM (GitDrop-style: drag&drop, ZIP, bulk, folder)
+// ═══════════════════════════════════════════════
+let UP_FILES=[];
+let UP_MODE='single';
+let UP_BASE='';
+
+function openUploadModal(base=''){
+  UP_BASE=base?base.replace(/\/$/,''):'';
+  UP_FILES=[];UP_MODE='single';
+  showModal('📤 Upload File',buildUploadHTML(),[]);
+  setTimeout(()=>{bindUploadEvents();setUpMode('single');},60);
+}
+function openBulkUploadModal(base=''){openUploadModal(base);}
+
+function buildUploadHTML(){
+  return`
+  <div style="display:flex;gap:4px;margin-bottom:12px;background:var(--bg3);padding:3px;border-radius:10px">
+    ${[['single','fa-file','1 File'],['bulk','fa-layer-group','Banyak'],['zip','fa-file-zipper','ZIP'],['folder','fa-folder','Folder']].map(([id,ic,lb])=>`
+    <button id="upTab-${id}" onclick="setUpMode('${id}')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:7px 3px;border:none;border-radius:8px;font-size:11.5px;font-weight:600;cursor:pointer;transition:all .15s;background:transparent;color:var(--text3)">
+      <i class="fas ${ic}" style="font-size:11px"></i>${lb}</button>`).join('')}
+  </div>
+  <div id="upModeDesc" style="font-size:12.5px;color:var(--text3);background:var(--bg4);border-radius:9px;padding:9px 12px;margin-bottom:12px;border:1px solid var(--border)"></div>
+  <div id="upDropzone" style="border:2px dashed var(--accent);border-radius:var(--r);background:rgba(0,122,255,.04);padding:28px 16px;text-align:center;cursor:pointer;transition:all .18s;position:relative;margin-bottom:12px">
+    <input type="file" id="upInput" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">
+    <div id="upIcon" style="font-size:32px;margin-bottom:8px">📄</div>
+    <div id="upTitle" style="font-weight:600;font-size:14px;margin-bottom:4px"></div>
+    <div style="font-size:12.5px;color:var(--text4)">atau klik untuk pilih dari perangkat</div>
+    <div id="upBadge" style="display:inline-block;margin-top:10px;font-size:11.5px;font-weight:500;color:var(--accent);background:rgba(0,122,255,.1);border:1px solid rgba(0,122,255,.2);border-radius:99px;padding:4px 12px"></div>
+  </div>
+
+  <div id="upFileList" style="display:none;margin-bottom:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <span id="upFileCount" style="font-size:12.5px;font-weight:600;color:var(--text3)"></span>
+      <button onclick="UP_FILES=[];renderUpFileList()" style="font-size:11px;color:var(--red);background:none;border:none;cursor:pointer;padding:3px 6px">Hapus Semua</button>
+    </div>
+    <div id="upFileItems" style="max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;background:var(--bg2)"></div>
+  </div>
+
+  <!-- Nama file (single only) -->
+  <div id="upRenameWrap" style="display:none;margin-bottom:12px">
+    <label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">
+      Nama File di Repo <span style="font-weight:400;color:var(--text4)">(opsional)</span>
+    </label>
+    <input type="text" id="upCustomName" placeholder="Contoh: config.yml" style="width:100%;padding:10px 12px;background:var(--bg);border:1.5px solid var(--border2);border-radius:9px;font-size:13.5px;color:var(--text);outline:none">
+    <div style="font-size:11.5px;color:var(--text4);margin-top:5px;line-height:1.4">
+      <i class="fas fa-info-circle" style="color:var(--accent)"></i>
+      Isi <strong>nama file saja</strong> (cth: <code style="background:var(--bg3);padding:1px 5px;border-radius:4px">index.html</code>). Kosongkan = pakai nama asli.
+    </div>
+  </div>
+
+  <!-- Folder tujuan -->
+  <div style="margin-bottom:12px">
+    <label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">
+      Folder Tujuan <span style="font-weight:400;color:var(--text4)">(opsional)</span>
+    </label>
+    <input type="text" id="upDestFolder" value="${UP_BASE}" placeholder="Contoh: src/assets" style="width:100%;padding:10px 12px;background:var(--bg);border:1.5px solid var(--border2);border-radius:9px;font-size:13.5px;color:var(--text);outline:none">
+    <div style="font-size:11.5px;color:var(--text4);margin-top:5px;line-height:1.4">
+      <i class="fas fa-info-circle" style="color:var(--accent)"></i>
+      Isi <strong>path folder tujuan</strong> saja, <strong>tanpa nama file</strong>
+      (cth: <code style="background:var(--bg3);padding:1px 5px;border-radius:4px">images</code>
+      atau <code style="background:var(--bg3);padding:1px 5px;border-radius:4px">src/assets</code>).
+      Kosongkan = simpan ke root repo.
+    </div>
+  </div>
+
+  <!-- Commit message -->
+  <div style="margin-bottom:12px">
+    <label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">Commit Message</label>
+    <input type="text" id="upCommitMsg" value="Upload file via GitHub Manager" style="width:100%;padding:10px 12px;background:var(--bg);border:1.5px solid var(--border2);border-radius:9px;font-size:13.5px;color:var(--text);outline:none">
+  </div>
+
+  <!-- Options -->
+  <div style="display:flex;flex-direction:column;gap:8px;background:var(--bg4);border-radius:10px;padding:10px 14px;border:1px solid var(--border);margin-bottom:12px">
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+      <input type="checkbox" id="upOverwrite" checked style="width:16px;height:16px;accent-color:var(--accent)">
+      <div><div style="font-weight:500">Overwrite file yang sudah ada</div><div style="font-size:11px;color:var(--text4)">Perbarui file jika sudah ada di repo</div></div>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+      <input type="checkbox" id="upSkipHidden" style="width:16px;height:16px;accent-color:var(--accent)">
+      <div><div style="font-weight:500">Skip file tersembunyi</div><div style="font-size:11px;color:var(--text4)">Abaikan file berawalan titik (.env, .DS_Store, dll)</div></div>
+    </label>
+  </div>
+
+  <!-- Progress -->
+  <div id="upProgress" style="display:none;margin-bottom:12px">
+    <div style="background:var(--bg3);border-radius:99px;height:8px;overflow:hidden;margin-bottom:6px">
+      <div id="upProgressBar" style="background:var(--accent);height:100%;width:0%;transition:width .25s;border-radius:99px"></div>
+    </div>
+    <div id="upProgressLog" style="max-height:110px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;color:var(--text3);background:var(--bg);border-radius:8px;padding:8px 10px;border:1px solid var(--border)"></div>
+  </div>
+
+  <div style="display:flex;gap:8px;justify-content:flex-end">
+    <button class="btn btn-outline" onclick="closeModal()" style="padding:10px 16px">Batal</button>
+    <button id="upDoBtn" class="btn btn-accent" onclick="doUpload()" disabled style="padding:10px 20px"><i class="fas fa-upload"></i> Upload</button>
+  </div>`;
+}
+
+const UP_MODE_CFG={
+  single:{icon:'📄',title:'Seret 1 file ke sini',badge:'Semua jenis file',desc:'Upload <strong>1 file</strong>. Kamu bisa mengubah nama file sebelum diupload di bawah.',multi:false,accept:'*/*'},
+  bulk:  {icon:'📚',title:'Seret banyak file ke sini',badge:'Multiple files',desc:'Upload <strong>banyak file sekaligus</strong>. Semua file dipilih dan diupload ke folder tujuan.',multi:true,accept:'*/*'},
+  zip:   {icon:'🗜️',title:'Seret 1 file ZIP ke sini',badge:'File .zip',desc:'Upload <strong>1 file .zip</strong> — isinya <strong>diekstrak otomatis</strong> dan diupload satu per satu.',multi:false,accept:'.zip'},
+  folder:{icon:'📁',title:'Seret folder ke sini',badge:'Seluruh folder',desc:'Upload <strong>seluruh folder beserta strukturnya</strong>. Subfolder dipertahankan di repo.',multi:false,accept:'*/*'},
+};
+
+function setUpMode(mode){
+  UP_MODE=mode;const cfg=UP_MODE_CFG[mode];
+  const inp=document.getElementById('upInput');if(!inp)return;
+  ['single','bulk','zip','folder'].forEach(m=>{
+    const t=document.getElementById('upTab-'+m);
+    if(t){t.style.background=m===mode?'var(--bg2)':'transparent';t.style.color=m===mode?'var(--text)':'var(--text3)';t.style.boxShadow=m===mode?'0 1px 4px rgba(0,0,0,.1)':'';}
+  });
+  document.getElementById('upIcon').textContent=cfg.icon;
+  document.getElementById('upTitle').textContent=cfg.title;
+  document.getElementById('upBadge').textContent=cfg.badge;
+  document.getElementById('upModeDesc').innerHTML='<i class="fas fa-circle-info" style="color:var(--accent);margin-right:6px"></i>'+cfg.desc;
+  inp.accept=cfg.accept;inp.multiple=cfg.multi;
+  if(mode==='folder'){inp.setAttribute('webkitdirectory','');inp.setAttribute('directory','');}
+  else{inp.removeAttribute('webkitdirectory');inp.removeAttribute('directory');}
+  const rn=document.getElementById('upRenameWrap');
+  if(rn)rn.style.display=mode==='single'?'block':'none';
+  UP_FILES=[];renderUpFileList();
+}
+
+function bindUploadEvents(){
+  const dz=document.getElementById('upDropzone');const inp=document.getElementById('upInput');if(!dz||!inp)return;
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.style.borderColor='var(--green)';dz.style.background='rgba(52,199,89,.07)';});
+  dz.addEventListener('dragleave',()=>{dz.style.borderColor='var(--accent)';dz.style.background='rgba(0,122,255,.04)';});
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.style.borderColor='var(--accent)';dz.style.background='rgba(0,122,255,.04)';handleUpFiles(Array.from(e.dataTransfer.files));});
+  inp.addEventListener('change',()=>handleUpFiles(Array.from(inp.files)));
+}
+
+async function handleUpFiles(rawFiles){
+  if(!rawFiles.length)return;
+  if(UP_MODE==='single')rawFiles=[rawFiles[0]];
+  for(const raw of rawFiles){
+    const isZip=raw.name.toLowerCase().endsWith('.zip');
+    if(UP_MODE==='zip'&&isZip){
+      if(typeof JSZip==='undefined'){
+        toast('JSZip tidak tersedia, upload sebagai file biasa','warn');
+        const buf=await upReadBuf(raw);UP_FILES.push({name:raw.name,size:raw.size,path:raw.name,content:buf});
+      } else {
+        try{
+          const buf=await upReadBuf(raw);const zip=await JSZip.loadAsync(buf);let cnt=0;
+          for(const[path,entry]of Object.entries(zip.files)){
+            if(entry.dir)continue;
+            const content=await entry.async('arraybuffer');
+            UP_FILES.push({name:path.split('/').pop()||path,size:content.byteLength,path,content});cnt++;
+          }
+          toast(`📦 ${raw.name}: ${cnt} file diekstrak`,'ok');
+        }catch{toast(`Gagal baca ZIP: ${raw.name}`,'err');}
+      }
+    } else if(UP_MODE==='zip'&&!isZip){
+      toast('Mode ZIP: hanya file .zip yang diterima','warn');
+    } else {
+      const buf=await upReadBuf(raw);
+      const relPath=raw.webkitRelativePath||raw.name;
+      UP_FILES.push({name:raw.name,size:raw.size,path:relPath,content:buf});
+    }
+  }
+  renderUpFileList();
+}
+
+function upReadBuf(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsArrayBuffer(file);});}
+function upAb2b64(buf){const b=new Uint8Array(buf);let s='';for(let i=0;i<b.length;i+=8192)s+=String.fromCharCode(...b.subarray(i,Math.min(i+8192,b.length)));return btoa(s);}
+
+function renderUpFileList(){
+  const wrap=document.getElementById('upFileList');const items=document.getElementById('upFileItems');
+  const cnt=document.getElementById('upFileCount');const btn=document.getElementById('upDoBtn');
+  if(!wrap||!items)return;
+  if(!UP_FILES.length){wrap.style.display='none';if(btn)btn.disabled=true;return;}
+  wrap.style.display='block';if(btn)btn.disabled=false;
+  if(cnt)cnt.textContent=`${UP_FILES.length} file siap diupload`;
+  const ei=n=>{const e=n.split('.').pop().toLowerCase();return{zip:'🗜️',js:'🟨',ts:'🔷',py:'🐍',html:'🌐',css:'🎨',json:'📋',md:'📝',sh:'🔧',yml:'⚙️',yaml:'⚙️',png:'🖼️',jpg:'🖼️',gif:'🖼️',svg:'🎨',pdf:'📕',txt:'📄',c:'⚙️',cpp:'⚙️',h:'⚙️'}[e]||'📄';};
+  const fs=b=>b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/1048576).toFixed(1)+'MB';
+  items.innerHTML=UP_FILES.map((f,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border)${i===UP_FILES.length-1?';border-bottom:none':''}">
+      <span style="font-size:17px;flex-shrink:0">${ei(f.name)}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
+        <div style="font-size:11px;color:var(--text4)">${fs(f.size)}${f.path&&f.path!==f.name?' · 📁 '+f.path:''}</div>
+      </div>
+      <button onclick="UP_FILES.splice(${i},1);renderUpFileList()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:14px;padding:3px 6px;flex-shrink:0"><i class="fas fa-times"></i></button>
+    </div>`).join('');
+}
+
+async function doUpload(){
+  if(!UP_FILES.length){toast('Pilih file dulu!','warn');return;}
+  const destFolder=(document.getElementById('upDestFolder').value.trim()).replace(/^\/+|\/+$/g,'');
+  const msg=document.getElementById('upCommitMsg').value.trim()||'Upload via GitHub Manager';
+  const overwrite=document.getElementById('upOverwrite').checked;
+  const skipHidden=document.getElementById('upSkipHidden').checked;
+  const customName=(document.getElementById('upCustomName')?.value||'').trim();
+  let toUpload=skipHidden?UP_FILES.filter(f=>!f.name.startsWith('.')):UP_FILES;
+  if(!toUpload.length){toast('Tidak ada file untuk diupload','warn');return;}
+  const prog=document.getElementById('upProgress');const bar=document.getElementById('upProgressBar');
+  const log=document.getElementById('upProgressLog');const btn=document.getElementById('upDoBtn');
+  prog.style.display='block';log.innerHTML='';
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Mengupload...';}
+  let ok=0,fail=0;const total=toUpload.length;
+  const addLog=(type,text)=>{
+    const c={ok:'#34c759',err:'#ff3b30',info:'var(--text3)'}[type];
+    log.innerHTML+=`<div style="color:${c}">${text}</div>`;log.scrollTop=log.scrollHeight;
+  };
+  addLog('info',`🚀 Upload ${total} file → ${REPO.full_name}@${BRANCH}`);
+  if(destFolder)addLog('info',`📁 Tujuan: /${destFolder}`);
+  for(let i=0;i<total;i++){
+    const f=toUpload[i];
+    let fname=UP_MODE==='single'&&customName?customName:f.name;
+    let rpath=(UP_MODE==='folder'||UP_MODE==='zip')?f.path:fname;
+    if(destFolder)rpath=destFolder+'/'+rpath;
+    rpath=rpath.replace(/^\/+/,'');
+    bar.style.width=((i+0.5)/total*100)+'%';
+    try{
+      let sha=null;
+      if(overwrite){try{const ex=await api(`/repos/${REPO.full_name}/contents/${rpath}`);sha=ex.sha;}catch{}}
+      const body={message:msg,content:upAb2b64(f.content),branch:BRANCH};if(sha)body.sha=sha;
+      await api(`/repos/${REPO.full_name}/contents/${rpath}`,'PUT',body);
+      addLog('ok',`✅ ${rpath}`);ok++;
+    }catch(e){addLog('err',`❌ ${rpath}: ${e.message}`);fail++;}
+    if(i<total-1)await new Promise(r=>setTimeout(r,120));
+  }
+  bar.style.width='100%';
+  if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-upload"></i> Upload Lagi';}
+  addLog(fail===0?'ok':'err',`${fail===0?'🎉':'⚠️'} Selesai: ${ok} berhasil${fail?' · '+fail+' gagal':''}`);
+  toast(fail===0?`✅ ${ok} file berhasil diupload`:`⚠️ ${ok} berhasil, ${fail} gagal`,fail===0?'ok':'warn');
+  if(REPO.size===0){REPO=await api(`/repos/${REPO.full_name}`);BRANCH=REPO.default_branch||'main';}
+  loadFiles(CUR_PATH.join('/'));
+}
+
+// Backward compat
+function fileToBase64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});}
+function confirmDelFile(path){
+  showModal('🗑️ Hapus File',`
+    <p class="text-sm">Hapus <strong>${path}</strong>?</p>
+    <div class="f-group" style="margin-top:10px"><label>Commit Message</label><input type="text" id="dfMsg" value="Delete ${path}"></div>`,
+    [{label:'Batal',cls:'btn-outline',fn:'closeModal()'},{label:'Hapus',cls:'btn-red',fn:`doDelFile('${path}')`}]);
+}
+async function doDelFile(path){
+  try{
+    const d=await api(`/repos/${REPO.full_name}/contents/${path}`);
+    await api(`/repos/${REPO.full_name}/contents/${path}`,'DELETE',{message:document.getElementById('dfMsg').value,sha:d.sha,branch:BRANCH});
+    toast(`Dihapus ✅`,'ok');closeModal();loadFiles(CUR_PATH.join('/'));
+  }catch(e){toast('Gagal: '+e.message,'err');}
+}
+// RENAME FILE
+function openRenameModal(oldPath){
+  const oldName=oldPath.split('/').pop();
+  const dir=oldPath.includes('/')?oldPath.substring(0,oldPath.lastIndexOf('/')):'';
+  showModal('✏️ Rename File',`
+    <div class="f-group">
+      <label>Nama Baru</label>
+      <input type="text" id="renameNew" value="${oldName}" autocomplete="off">
+    </div>
+    <div class="f-group">
+      <label>Commit Message</label>
+      <input type="text" id="renameMsg" value="Rename ${oldName}">
+    </div>
+    <p class="text-xs text-muted" style="margin-top:4px">Path lama: <span class="mono">${oldPath}</span></p>`,
+    [{label:'Batal',cls:'btn-outline',fn:'closeModal()'},{label:'Rename',cls:'btn-accent',fn:`doRenameFile('${oldPath}','${dir}')`}]);
+  setTimeout(()=>{
+    const inp=document.getElementById('renameNew');
+    if(inp){inp.focus();inp.select();}
+  },100);
+}
+async function doRenameFile(oldPath,dir){
+  const newName=document.getElementById('renameNew').value.trim();
+  const msg=document.getElementById('renameMsg').value||`Rename ${oldPath.split('/').pop()} to ${newName}`;
+  if(!newName){toast('Nama baru wajib diisi!','warn');return;}
+  const oldName=oldPath.split('/').pop();
+  if(newName===oldName){toast('Nama sama, tidak ada perubahan','warn');return;}
+  const newPath=dir?`${dir}/${newName}`:newName;
+  try{
+    // Get current file content + sha
+    const d=await api(`/repos/${REPO.full_name}/contents/${oldPath}?ref=${BRANCH}`);
+    // Create new file with new name
+    await api(`/repos/${REPO.full_name}/contents/${newPath}`,'PUT',{
+      message:msg,
+      content:d.content.replace(/\n/g,''), // already base64 from API
+      branch:BRANCH
+    });
+    // Delete old file
+    await api(`/repos/${REPO.full_name}/contents/${oldPath}`,'DELETE',{
+      message:`Remove old file after rename to ${newName}`,
+      sha:d.sha,
+      branch:BRANCH
+    });
+    toast(`Berhasil rename ke "${newName}" ✅`,'ok');
+    closeModal();
+    loadFiles(CUR_PATH.join('/'));
+  }catch(e){toast('Gagal rename: '+e.message,'err');}
+}
+
+function openCreateGistModal(){
+  showModal('📝 Gist Baru',`
+    <div class="f-group"><label>Deskripsi</label><input type="text" id="gDesc" placeholder="Deskripsi..."></div>
+    <div class="f-group"><label>Nama File</label><input type="text" id="gFile" placeholder="snippet.js"></div>
+    <div class="f-group"><label>Konten</label><textarea id="gContent" placeholder="// kode kamu..."></textarea></div>
+    <div class="f-group"><label>Visibilitas</label><select id="gPub"><option value="true">🌐 Public</option><option value="false">🔒 Secret</option></select></div>`,
+    [{label:'Batal',cls:'btn-outline',fn:'closeModal()'},{label:'Buat',cls:'btn-accent',fn:'doCreateGist()'}]);
+}
+async function doCreateGist(){
+  const fname=document.getElementById('gFile').value.trim()||'snippet.txt';
+  try{
+    await api('/gists','POST',{description:document.getElementById('gDesc').value,public:document.getElementById('gPub').value==='true',files:{[fname]:{content:document.getElementById('gContent').value||' '}}});
+    toast('Gist dibuat! 🎉','ok');closeModal();loadGists();
+  }catch(e){toast('Gagal: '+e.message,'err');}
+}
+
+// REFRESH FUNCTIONS
+async function refreshDashboard(){
+  const btn=document.getElementById('dashRefreshBtn');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-rotate-right fa-spin"></i>';}
+  await loadRepos();
+  if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-rotate-right"></i>';}
+  toast('Dashboard diperbarui ✅','ok');
+}
+async function refreshRepos(){
+  const btn=document.getElementById('reposRefreshBtn');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-rotate-right fa-spin"></i>';}
+  await loadRepos();
+  if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-rotate-right"></i>';}
+  toast('Daftar repo diperbarui ✅','ok');
+}
+async function refreshRepoDetail(){
+  if(!REPO)return;
+  try{
+    REPO=await api(`/repos/${REPO.full_name}`);
+    BRANCH=REPO.default_branch||'main';
+    renderDetailHeader();
+    // Refresh tab yang sedang aktif
+    if(DETAIL_TAB==='files')loadFiles(CUR_PATH.join('/'));
+    else if(DETAIL_TAB==='actions')loadActions();
+    else if(DETAIL_TAB==='branches')loadBranches();
+    else if(DETAIL_TAB==='settings')renderSettings();
+    toast('Repo diperbarui ✅','ok');
+  }catch(e){toast('Gagal refresh: '+e.message,'err');}
+}
+async function reloadEditorFile(){
+  if(!EDIT_FILE||!EDIT_FILE.path)return;
+  if(!confirm('Reload file dari GitHub? Perubahan yang belum disimpan akan hilang.'))return;
+  toast('Memuat ulang file...','info');
+  await openFile(EDIT_FILE.path);
+}
+
+// NAVIGATION
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const p=document.getElementById('page-'+name);
+  if(p)p.classList.add('active');
+  // sidebar nav
+  document.querySelectorAll('.snav-item').forEach(i=>i.classList.remove('active'));
+  const sid=`snav-${name==='detail'||name==='editor'?'repos':name}`;
+  const sel=document.getElementById(sid);if(sel)sel.classList.add('active');
+  // bottom nav
+  document.querySelectorAll('.bnav-item').forEach(i=>i.classList.remove('active'));
+  const bid=`bnav-${name==='detail'||name==='editor'?'repos':name}`;
+  const bel=document.getElementById(bid);if(bel)bel.classList.add('active');
+  // top btn
+  const topBtn=document.getElementById('topBtn');
+  topBtn.style.display=(name==='dashboard'||name==='repos')?'flex':'none';
+  // breadcrumb defaults
+  if(name==='dashboard')setBreadcrumb('Dashboard');
+  else if(name==='repos')setBreadcrumb('Repositories');
+  else if(name==='gists')setBreadcrumb('Gists');
+  if(name==='gists')loadGists();
+  // scroll top - safe
+  const mainEl=document.getElementById('main');
+  if(mainEl)mainEl.scrollTo(0,0);
+}
+function setBreadcrumb(text,isRepo=false){
+  const el=document.getElementById('topBreadcrumb');
+  if(isRepo&&text.includes('/')){
+    const[owner,repo]=text.split('/');
+    el.innerHTML=`<span class="tb-crumb" onclick="showPage('repos')">${owner}</span><span class="tb-sep">/</span><span class="tb-crumb">${repo}</span>`;
+  } else {
+    el.innerHTML=`<span class="tb-crumb">${text}</span>`;
+  }
+}
+
+// SIDEBAR
+function toggleSidebar(){
+  const s=document.getElementById('sidebar'),o=document.getElementById('sidebarOverlay');
+  s.classList.toggle('open');o.classList.toggle('show');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('show');
+}
+
+// MODAL
+function showModal(title,body,buttons=[]){
+  document.getElementById('modalTitle').textContent=title;
+  document.getElementById('modalBody').innerHTML=body;
+  document.getElementById('modalFooter').innerHTML=buttons.map(b=>`<button class="btn ${b.cls||'btn-accent'}" onclick="${b.fn}">${b.label}</button>`).join('');
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('show');}
+function closeModalOutside(e){if(e.target===document.getElementById('modalOverlay'))closeModal();}
+
+// TOAST
+function toast(msg,type='info'){
+  const icons={ok:'fa-check-circle',err:'fa-times-circle',info:'fa-info-circle',warn:'fa-exclamation-triangle'};
+  const el=document.createElement('div');
+  el.className=`toast ${type}`;
+  el.innerHTML=`<i class="fas ${icons[type]||'fa-info-circle'}"></i><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(()=>el.remove(),3200);
+}
+
+// UTILS
+function timeAgo(d){
+  const s=Math.floor((new Date()-new Date(d))/1000);
+  if(s<60)return s+'d lalu';if(s<3600)return Math.floor(s/60)+'m lalu';
+  if(s<86400)return Math.floor(s/3600)+'j lalu';if(s<2592000)return Math.floor(s/86400)+'h lalu';
+  return Math.floor(s/2592000)+'bln lalu';
+}
+function fmtSize(b){if(b<1024)return b+'B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(1)+'MB';}
+
+// KEYBOARD
+document.addEventListener('keydown',e=>{
+  const inEditor=document.getElementById('page-editor').classList.contains('active');
+  if(e.key==='Escape'){closeFindBar();closeModal();}
+  if(inEditor){
+    if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();saveFile();}
+    if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();edUndo();}
+    if((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.shiftKey&&e.key==='z'))){e.preventDefault();edRedo();}
+    if((e.ctrlKey||e.metaKey)&&e.key==='h'){e.preventDefault();openFindReplace();}
+    if((e.ctrlKey||e.metaKey)&&e.key==='f'){e.preventDefault();openFindReplace();}
+  }
+});
+
+// AUTO LOGIN
+window.onload=()=>{
+  const saved=localStorage.getItem('gh_tok');
+  if(saved){TOKEN=saved;api('/user').then(u=>{USER=u;initApp();}).catch(()=>localStorage.removeItem('gh_tok'));}
+  // Editor selection status
+  const ta=document.getElementById('codeEditor');
+  if(ta){
+    ta.addEventListener('click',updateEditorStatus);
+    ta.addEventListener('keyup',updateEditorStatus);
+    ta.addEventListener('select',updateEditorStatus);
+  }
+};
+</script>
+</body>
+</html>
